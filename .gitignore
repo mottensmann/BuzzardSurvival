@@ -3,4 +3,10 @@
 .RData
 .Ruserdata
 internal/
+drafts/
 RData
+subset_buzzard_db.R
+*.inp
+*.out
+*.res
+*.vcv

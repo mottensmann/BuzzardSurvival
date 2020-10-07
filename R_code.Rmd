@@ -1,0 +1,1250 @@
+---
+title: "Buzzard Survival"
+author: "Meinolf Ottensmann"
+output: html_document
+---
+
+This document details all required steps to repeat analyses presented within our manuscript.
+
+## Load required Packages
+
+```{r, message=FALSE, warning=FALSE}
+rm(list = ls())
+library(tidyverse)
+library(magrittr)
+library(patchwork)
+library(RMark)
+library(sjPlot)
+library(sjlabelled)
+library(sjmisc)
+library(lme4)
+library(forestmodel)
+```
+
+## Load raw data 
+### NAO indices
+
+Here, we use NAO indices that are based on the principal component approach [^8] (Hurrel, 2003).
+
+```{r}
+nao <- read.table("data/nao.txt", header = T) %>% 
+  mutate(time = as.factor(year))
+```
+
+### buzzard data
+
+This analysis is based on data from a longterm study on common buzzards *Buteo buteo* comprising 2499 individuals that were ringed as nestlings and individually marked with wingtags in the period 2007 to 2019. Note, due to logistic constraints there is no information on *Leucocytozoon* infections available for the cohort of 2008 and thus individuals from that cohort are omitted from analyses.
+There are two datasets, `ringing_data` containing morphometric measures of all individuals used for this analysis and `resighting_data` detailing resightings for these individuals.
+
+```{r, message=FALSE}
+ringing_data <- as.data.frame(read_csv("data/ringing_data.csv")) 
+resighting_data <- as.data.frame(read_csv("data/resighting_data.csv"))
+```
+
+# Statistical Analysis
+
+## Burnham model (Live & dead encounters)
+
+We model survival probabilites using combined dead and live encounter events using the `Burnham` model in `MARK`.  
+
+Based on ringing data and resightings of individuals, we assemble combined live-dead encounter histories for all individuals using the function `create.ld`. This functions generates a vector of the form `LDLDLD`, where `L` codes live encounters and `D` dead recoveries respectively. Together, each `LD` pair codes for one interval of the study period.
+
+```{r}
+## function to derive encounter histories
+create.ld <- function(start, end, ringing_data, resights) {
+  ## Identify all individuals 
+  individuals <- ringing_data$Ring %>%
+    unique()
+  
+  ## define Study periods based on start and end years
+  years <- c(start, end)
+  periods <- rep(seq(start, end), each = 1)
+
+  ## create matrix 
+  ## rows: Individuals
+  ## cols: 2 Periods per year with Live and Dead encounters respectively
+  mat <- matrix(0, nrow = length(individuals), ncol = length(periods)*2) %>% 
+    set_colnames(paste0(rep(periods, each = 2), c("L", "D"))) %>% 
+    set_rownames(individuals)
+  
+  ## code year of capture as 1,
+  ## Code sightings in subsequent intervals by 1 too
+  for (x in individuals) {
+    year.ringed <- filter(ringing_data, Ring == x)[["Year"]][1]
+      ## code birth year in living encounters
+      mat[rownames(mat) == x, colnames(mat) == paste0(year.ringed, "L")] <- 1  
+
+      ## get resights and assign to sampling instances. As years are defined
+      ## by the period 01.04 to 31.03, the first three month of each year count 
+      ## for the preceding interval.
+      year.resighted <- 
+        filter(resights, Ring == x)[,c("Year", "Month")] %>% 
+        mutate(period = case_when(
+          Month == "01" ~ paste0(as.numeric(Year) - 1 , "L"),
+          Month == "02" ~ paste0(as.numeric(Year) - 1 , "L"),
+          Month == "03" ~ paste0(as.numeric(Year) - 1 , "L"),
+          Month == "04" ~ paste0(Year, "L"),
+          Month == "05" ~ paste0(Year, "L"),
+          Month == "06" ~ paste0(Year, "L"),
+          Month == "07" ~ paste0(Year, "L"),
+          Month == "08" ~ paste0(Year, "L"),
+          Month == "09" ~ paste0(Year, "L"),
+          Month == "10" ~ paste0(Year, "L"),
+          Month == "11" ~ paste0(Year, "L"),
+          Month == "12" ~ paste0(Year, "L")
+        ))
+
+        ## write resights to matrix 
+  for (col in year.resighted$period) {
+    mat[rownames(mat) == x, colnames(mat) == col] <- 1
+  }
+  
+  ## check if reported as dead
+  death <- filter(ringing_data, Ring == x)[,c("Dead", "DateDeath")][1,]
+  if (!is.na(death$Dead)) {
+    col <- paste0(substr(death$DateDeath, 1, 4),"D")
+    mat[rownames(mat) == x, colnames(mat) == col] <- 1
+  }
+  
+}
+
+## coerce to character vector
+return(apply(mat[,], 1, function(x) paste0(x, collapse = "")) %>% 
+         as.character())
+
+}
+```
+
+Apply the function to the data:
+
+```{r}
+## add resighting histories to the ringing data
+df <- data.frame(
+  filter(ringing_data, !is.na(Lprev)),
+  ch =  create.ld(start = 2007, # first year
+                  end = 2020, # last year
+                  ringing_data = ringing_data,
+                  resights = resighting_data)) %>% 
+  mutate(ch = as.character(ch)) %>% 
+  mutate(Sex = as.factor(Sex)) %>% 
+  mutate(Hatch = scale(Hatch)) 
+
+## process the data for RMark
+dp  <-  process.data(df, model = "Burnham",
+                     begin.time = 2007, groups = "Sex")
+
+## create design data
+ddl <-  make.design.data(dp)
+
+## Add design data for components 
+## Survival
+ddl$S <- ddl$S %>% 
+  mutate(age = as.numeric(as.character(age))) %>% 
+  mutate(ageclass = 
+           case_when(
+             age == 0 ~ "CY1",
+             age == 1 ~ "CY2",
+             age == 2 ~ "CY3",
+             age >= 3 ~ "CY4plus"
+           ))
+
+## collect variables which are year but not individual specific
+covars <- left_join(data.frame(time = ddl$S$time), nao, "time")
+
+## extend design data with covariates
+ddl$S$djfm <- covars$djfm ## Winter NAO index
+
+## Site-Fidelity
+ddl$F <- ddl$F %>% 
+  mutate(age = as.numeric(as.character(age))) %>% 
+  mutate(ageclass = 
+           case_when(
+             age == 0 ~ "CY1",
+             age == 1 ~ "CY2",
+             age == 2 ~ "CY3",
+             age >= 3 ~ "CY4plus"
+           ))
+
+## recovery chances
+ddl$r <- ddl$r %>%
+  mutate(age = as.numeric(as.character(age))) %>% 
+  mutate(ageclass = 
+           case_when(
+             age == 0 ~ "CY1",
+             age == 1 ~ "CY2",
+             age == 2 ~ "CY3",
+             age >= 3 ~ "CY4plus"
+           ))
+
+## resight probability
+ddl$p <- ddl$p %>% 
+  mutate(age = as.numeric(as.character(age))) %>% 
+  mutate(ageclass = 
+           case_when(
+             age == 0 ~ "CY1",
+             age == 1 ~ "CY2",
+             age == 2 ~ "CY3",
+             age >= 3 ~ "CY4plus"
+           ))
+```
+
+```{r, eval=FALSE, echo=FALSE}
+dat <- sapply(df$ch, stringr::str_split, "", simplify = T) %>% 
+  do.call("rbind",.) %>% 
+   apply(.,2,as.numeric) %>% 
+  set_colnames(rep(c("L", "D"), nchar(df$ch[[1]])/2)) 
+
+## split dead and live
+L <- dat[,seq(1, ncol(dat), 2)] %>% 
+  set_colnames(2007:2020)
+D <- dat[,seq(2, ncol(dat), 2)] %>% 
+  set_colnames(2007:2020)
+
+rm(dat)
+
+output <- matrix(
+  data = 0,
+  nrow = length(seq(2007, 2020)),
+  ncol = 2 + length(seq(2008, 2020)) + length(seq(2007, 2020))
+) %>% 
+  as.data.frame()
+colnames(output) <- 
+  c("Year", "Releases", 
+    paste0("L", 2008:2020),
+    paste0("D", 2007:2020))
+output[1:nrow(output),1] <- 2007:2020
+
+r <- 1
+for (r in 1:nrow(L)) {
+  alive <- names(which(L[r,] == 1)) 
+  released <- min(alive)
+  resighted <- alive[alive != released]
+  dead <- ifelse(any(D[r,] == 1), names(which(D[r,] == 1)),character())
+  
+  ## add release to table
+  output[output$Year == released, "Releases"] <-
+      output[output$Year == released, "Releases"] + 1
+  
+  if (length(resighted > 0)) {
+    output[output$Year == released, paste0("L", resighted)] <-
+      output[output$Year == released, paste0("L", resighted)] + 1
+  }
+  if (length(dead[!is.na(dead)] > 0)) {
+    output[output$Year == released, paste0("D", dead)] <-
+      output[output$Year == released, paste0("D", dead)] + 1
+  }
+}
+write.csv(output, file = "data/sample.sizes.csv")
+knitr::kable(output)
+```
+
+```{r,eval=F}
+resights <- sapply(df.A$ch, stringr::str_split, "", simplify = T) %>% 
+  do.call("rbind",.) %>% 
+  apply(.,2,as.numeric) %>%
+  set_colnames(2007:2019) %>% 
+  colSums() 
+resights <- data.frame(Year = names(resights),
+                       Resights = resights)
+
+combo <- left_join(resights, cohorts) %>% 
+  mutate(Resights = ifelse(is.na(Resights), 0, Resights)) %>% 
+  mutate(Freq = ifelse(is.na(Freq), 0, Freq)) %>% 
+  mutate(annual.resights = Resights - Freq)
+write.csv(combo,"data/sample.sizes.csv")
+
+
+## resighs per ind
+res.ind <- sapply(df.A$ch, stringr::str_split, "", simplify = T) %>% 
+  do.call("rbind",.) %>% 
+  apply(.,2,as.numeric) %>%
+  set_colnames(2007:2019) %>% 
+  rowSums() - 1
+cat("Ind Resighted:", length(res.ind[res.ind > 0]))
+cat("Prop Resighted:", length(res.ind[res.ind > 0])/length(res.ind))
+cat("Avg #:", mean(res.ind[res.ind > 0]))
+cat("Avg #:", sd(res.ind[res.ind > 0]))
+
+## format sample size report
+cohorts <- data.frame(with(df.B, table(Year)))
+sex <- data.frame(with(df.B, table(Year, Sex)))
+leuco <- with(df.B, table(Lprev)) # summary by leucocytozoon count
+
+resights <- sapply(df.B$ch, stringr::str_split, "", simplify = T) %>% 
+  do.call("rbind",.) %>% 
+  apply(.,2,as.numeric) %>%
+  #set_colnames(2007:2019) %>% 
+  colSums() 
+resights <- data.frame(Year = names(resights),
+                       Resights = resights)
+
+combo <- left_join(resights, cohorts) %>% 
+  mutate(Resights = ifelse(is.na(Resights), 0, Resights)) %>% 
+  mutate(Freq = ifelse(is.na(Freq), 0, Freq)) %>% 
+  mutate(annual.resights = Resights - Freq)
+write.csv(combo,"data/sample.sizes.csv")
+
+
+## resighs per ind
+res.ind <- sapply(df.B$ch, stringr::str_split, "", simplify = T) %>% 
+  do.call("rbind",.) %>% 
+  apply(.,2,as.numeric) %>%
+  set_colnames(2007:2019) %>% 
+  rowSums() - 1
+cat("Ind Resighted:", length(res.ind[res.ind > 0]))
+cat("Prop Resighted:", length(res.ind[res.ind > 0])/length(res.ind))
+cat("Avg #:", mean(res.ind[res.ind > 0]))
+cat("Avg #:", sd(res.ind[res.ind > 0]))
+
+```
+
+### Bootstrapping Global model
+
+The code below is used to implement a parametric bootstrapping to calculate median $\hat{C}$ based in function defined in the script `R/bootstrapping_functions.R`
+
+```{r, eval = F, message=FALSE, warning=FALSE}
+source("R/bootstrapping.R")
+## run global model to get parameter estimates
+global.model <- mark(dp, ddl, silent = T, output = F,
+                     model.parameters = list(
+S = list(formula = ~ time*Sex), 
+p = list(formula = ~ time*Sex),
+F = list(formula = ~ time*Sex),
+r = list(formula = ~ time*Sex)),
+model = 'Burnham')
+
+## get model estimates/effects
+params <- global.model$results$real
+
+## get parameter names
+components <- lapply(row.names(params), function(x) {
+  stringr::str_split(x, pattern = " ")[[1]]
+}) %>% 
+  do.call("rbind",.) %>% 
+  as.data.frame() %>% 
+  set_colnames(c("Estimate", "Group", "Cohort", "a", "t"))
+
+## extract sex-specific components
+S.female <-   
+  params$estimate[which(components$Estimate == "S" & components$Group == "gFemale")]
+S.male <-
+  params$estimate[which(components$Estimate == "S" & components$Group == "gMale")] 
+p.female <-
+  params$estimate[which(components$Estimate == "p" & components$Group == "gFemale")]
+p.male <-
+  params$estimate[which(components$Estimate == "p" & components$Group == "gMale")]
+F.female <-
+  params$estimate[which(components$Estimate == "F" & components$Group == "gFemale")]
+F.male <-
+  params$estimate[which(components$Estimate == "F" & components$Group == "gMale")]
+r.male <-
+  params$estimate[which(components$Estimate == "r" & components$Group == "gMale")]
+r.female <-
+  params$estimate[which(components$Estimate == "r" & components$Group == "gFemale")]
+
+## conduct simulations using parametric bs for both models
+sim.out <- sims.burnham(
+  S.fem = S.female, 
+  S.mal = S.male,
+  p.fem = p.female,
+  p.mal = p.male,
+  F.fem = F.female,
+  F.mal = F.male,
+  r.fem = r.female,
+  r.mal = r.male,
+  marked =  Marked.burnham(data = df,
+                   n.occasions = nchar(df$ch[1])/2,
+                   groups = c("Female","Male"),
+                   group.col = "Sex"),
+  group.col = "Sex", reps = 9, 
+  model.parameters = list(
+S = list(formula = ~ time*sex), 
+p = list(formula = ~ time*sex),
+F = list(formula = ~ time*sex),
+r = list(formula = ~ time*sex)))
+
+save(sim.out, file = "data/sim.out.RData")
+c.hat <- global.model$results$deviance/sim.out$deviance.mean
+save(c.hat, file = "data/c.hat.RData")
+cleanup(ask = F)
+```
+
+### Candidate models
+
+The code below implements all candidate models. As the execution is computationally extensive the code is not executed by default but the output is saved as part of this repository.  
+
+```{r, eval=FALSE, message=FALSE, warning=FALSE}
+do_analysis = function(dp, ddl) {
+  
+  S.dot = list(formula = ~ 1)
+  S.0 = list(formula = ~ ageclass + Sex)
+  S.cond = list(formula = ~ ageclass*cond + Sex)
+  S.condxdjfm = list(formula = ~ ageclass*cond + ageclass*djfm + Sex)
+  S.condxdjfmxhatch = list(formula = ~ ageclass*cond + ageclass*djfm + ageclass*Hatch + Sex)
+  S.djfm = list(formula = ~ ageclass*djfm + Sex)
+  S.djfmxhatch = list(formula = ~ ageclass*djfm + ageclass*Hatch + Sex)
+  
+  S.A = list(formula = ~ 
+               ageclass * cond + ageclass * djfm + Sex + Morph + ageclass*Lprev + ageclass * Ekto)
+  
+  S.B = list(formula = ~ 
+               ageclass * cond + ageclass * djfm + Sex + Morph + ageclass*Lprev + ageclass * Ekto + ageclass * ageclass * Hatch + ageclass * Rank)
+  
+  S.C = list(formula = ~ 
+               ageclass * cond + ageclass * djfm + Sex + Morph + ageclass*Lprev + ageclass * Ekto + ageclass * ageclass * Hatch + ageclass * Rank * Brood_Size)
+  
+  
+  S.D = list(formula = ~ 
+               ageclass * cond + ageclass * djfm + ageclass*Lprev)
+  
+  
+  S.E = list(formula = ~ 
+               ageclass * cond + djfm + ageclass*Lprev)
+  
+  
+  p.time = list(formula = ~ time + ageclass)
+  p.dot = list(formula = ~ 1)
+  F.age = list(formula = ~ Sex + ageclass)
+  F.age2 = list(formula = ~ Sex * ageclass)
+  F.dot = list(formula = ~ 1)
+  F.sex = list(formuula = ~ Sex)
+  r.age = list(formula = ~ ageclass)
+  r.dot = list(formula = ~ 1)
+  
+  cml = create.model.list(model = "Burnham")
+  # run all models and return as a list with class 'marklist'
+  results = mark.wrapper(cml, data = dp, ddl = ddl, output = F, silent = T)
+  return(results)
+}
+models <- do_analysis(dp = dp, ddl = ddl)
+
+## adjust for overdispersion using c-hat
+load("data/c.hat.RData")
+models.adj <-  adjust.chat(model.list = models, chat = c.hat) 
+model.tab <- model.table(models.adj, use.lnl = TRUE) %>% 
+  mutate(weight = round(weight, 2)) %>% 
+  mutate(DeltaQAICc = round(DeltaQAICc, 2)) %>% 
+  mutate(Neg2LnL = round(Neg2LnL, 2)) 
+
+# models within 7 DeltaQAICc units of the best are considered to have
+## statistical support
+supported.models <- remove.mark(
+  marklist = models.adj,
+  model.numbers = which(model.table(models.adj, sort = F)[["DeltaQAICc"]] > 7))
+
+suffix <- Sys.time() %>% 
+  as.character() %>% 
+  stringr::str_remove(., " ") %>% 
+  gsub(pattern = ":", replacement = "-", x = .)
+
+print(model.tab[,c("model", "npar", "DeltaQAICc", "Neg2LnL", "weight")])
+write.csv(model.tab, "data/model_output.csv", row.names = F)
+
+save(suffix, file = paste0("data/",suffix,".RData"))
+save(models, file = paste0("data/models.", suffix, ".RData"))
+save(models.adj, file = paste0("data/models.adj.", suffix, ".RData"))
+save(supported.models, file = paste0("data/supported.models.", suffix, ".RData"))
+```
+
+### Results
+
+As the execution of the model 
+
+```{r}
+## load previously saved results
+suffix <- '2020-10-0522-27-47'
+load(paste0("RData/models.", suffix, ".RData"))
+load(paste0("RData/models.adj.", suffix, ".RData"))
+load(paste0("RData/supported.models.", suffix, ".RData"))
+```
+
+#### Model averaging
+
+```{r, message=FALSE, warning=FALSE}
+## get all S estimates and their confidence 
+S.estimates <- model.average(supported.models, parameter = "S", drop = T, vcv = T)[["estimates"]] %>% 
+  subset(., select = c(estimate, se, lcl, ucl, age, Sex))
+
+## compute means for sex and age combinations
+comb <- list(list(Sex = "Male", age = 0, ageclass = "CY1"), # CY1
+             list(Sex = "Male", age = 1, ageclass = "CY2"),
+             list(Sex = "Male", age = 2, ageclass = "CY3"),
+             list(Sex = "Male", age = 3:13, ageclass = "CY4plus"),
+             list(Sex = "Female", age = 0, ageclass = "CY1"), # CY1
+             list(Sex = "Female", age = 1, ageclass = "CY2"),
+             list(Sex = "Female", age = 2, ageclass = "CY3"),
+             list(Sex = "Female", age = 3:13, ageclass = "CY4plus")
+             )
+age.effect <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(S.estimates, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl),
+             se = mean(dx$se),
+             Sex = comb[[x]]$Sex,
+             Age = comb[[x]]$ageclass)
+}) %>% 
+  do.call("rbind",.)
+
+mod.avg.F <- model.average(models.adj, parameter = "F", vcv = T, drop = T)$estimates %>% 
+  subset(., select = (c(estimate, se, lcl, ucl, time, age, Sex))) %>% 
+  unique.data.frame() 
+
+mod.avg.F <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(mod.avg.F, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl), 
+             se = mean(dx$se),
+             Sex = comb[[x]]$Sex,
+             Age = comb[[x]]$ageclass)
+}) %>% 
+  do.call("rbind",.)
+
+mod.avg.r <- model.average(models.adj, parameter = "r", vcv = T, drop = T)$estimates %>% 
+  subset(., select = (c(estimate, se, lcl, ucl, time, age, Sex))) %>% 
+  unique.data.frame() 
+
+mod.avg.r <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(mod.avg.r, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl), 
+             se = mean(dx$se),
+             Sex = comb[[x]]$Sex,
+             Age = comb[[x]]$ageclass)
+}) %>% 
+  do.call("rbind",.)
+
+# query time as well
+mod.avg.p <- model.average(models.adj, parameter = "p", vcv = T, drop = T)$estimates %>% 
+  subset(., select = (c(estimate, se, lcl, ucl, time, age))) %>% 
+  unique.data.frame() 
+
+## compute means for sex and age combinations
+## exclude fixed values for know
+comb <- list(
+  list(time = 2008, age = 1, Age = "CY2"),
+ 
+  list(time = 2009, age = 1, Age = "CY2"),
+  list(time = 2009, age = 2, Age = "CY3"),
+  
+  list(time = 2010, age = 1, Age = "CY2"),
+  list(time = 2010, age = 2, Age = "CY3"),
+  list(time = 2010, age = 3:13, Age = "CY4+"),           
+  
+  list(time = 2011, age = 1, Age = "CY2"),
+  list(time = 2011, age = 2, Age = "CY3"),
+  list(time = 2011, age = 3:13, Age = "CY4+"),           
+ 
+  list(time = 2012, age = 1, Age = "CY2"),
+  list(time = 2012, age = 2, Age = "CY3"),
+  list(time = 2012, age = 3:13, Age = "CY4+"),         
+  
+  list(time = 2013, age = 1, Age = "CY2"),
+  list(time = 2013, age = 2, Age = "CY3"),
+  list(time = 2013, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2014, age = 1, Age = "CY2"),
+  list(time = 2014, age = 2, Age = "CY3"),
+  list(time = 2014, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2015, age = 1, Age = "CY2"),
+  list(time = 2015, age = 2, Age = "CY3"),
+  list(time = 2015, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2016, age = 1, Age = "CY2"),
+  list(time = 2016, age = 2, Age = "CY3"),
+  list(time = 2016, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2017, age = 1, Age = "CY2"),
+  list(time = 2017, age = 2, Age = "CY3"),
+  list(time = 2017, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2018, age = 1, Age = "CY2"),
+  list(time = 2018, age = 2, Age = "CY3"),
+  list(time = 2018, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2019, age = 1, Age = "CY2"),
+  list(time = 2019, age = 2, Age = "CY3"),
+  list(time = 2019, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2020, age = 1, Age = "CY2"),
+  list(time = 2020, age = 2, Age = "CY3"),
+  list(time = 2020, age = 3:13, Age = "CY4+")         
+)
+p.effect <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(mod.avg.p, time == comb[[x]]$time, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl),
+             se = mean(dx$se),
+             time = comb[[x]]$time,
+             Age = comb[[x]]$Age)
+}) %>% 
+  do.call("rbind",.) %>% 
+  mutate(x = case_when(
+    Age == "CY2" ~ time - 0.25,
+    Age == "CY3" ~ time,
+    Age == "CY4+" ~ time + 0.25
+  ))
+```
+
+#### Survival probabilites
+
+##### Effect of Age
+
+```{r, message=FALSE, warning=FALSE}
+age.effect$x <- c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2)
+
+p.age <- 
+  ggplot(age.effect, aes(x = x, y = estimate, col = Sex, fill = Sex)) +
+#  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = .25, size = 1) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1) +
+  geom_point(size = 3, shape = 15) +
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12),
+    legend.position = c(.2, .05),
+    legend.title = element_blank(),
+    legend.direction = "horizontal",
+    legend.background = element_rect(fill = NA),
+    aspect.ratio = 1) +
+  scale_colour_brewer(palette = "Set1", direction = -1) +
+  scale_x_continuous(breaks = 1:4, labels = unique(age.effect$Age)) +
+  scale_y_continuous(expand = c(0,0), 
+                     limits = c(0,1),
+                     breaks = seq(0, 1, .2)) +
+  xlab("Age class") +
+  ylab("Suvival probability [Mean \U00B1 SE]") 
+
+p.age
+```
+
+
+##### Effect of Condition
+
+```{r message=FALSE, warning=FALSE}
+# create values of cond.index to use for predictions
+cond.index.values = seq(from = -2, to = 2, length.out = 100)
+
+## Extract get 'par.index' of interest
+index.meta <- data.frame(
+  Sex = rep(c("Female", "Male"), each = 4),
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 2)) %>% 
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "Sex", "ageclass")],
+            by = c("Sex", "ageclass")) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(Sex, ageclass)) 
+
+## simplify, one par.index for each dummy var
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>% 
+  unlist()
+
+## subset index.meta
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+## get estimates from the model
+pred.model <- covariate.predictions(
+  supported.models, 
+  data = data.frame(
+    cond = cond.index.values, cond.index.sq = cond.index.values^2), 
+  indices = model.indices %>% as.numeric(),
+  drop = T)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(pred.model,
+                        index.meta[,c("par.index", "ageclass", "Sex")], 
+                        by = "par.index") %>%
+  mutate(Group = paste0(Sex, ageclass))
+head(pred.model)
+
+p.cond <- 
+  ggplot(pred.model, aes(x = cond, y = estimate, group = Group)) +
+  geom_line(size = 1.5,aes(colour = Sex)) +
+  geom_ribbon(aes(ymin = estimate - se,
+                  ymax = estimate + se,
+                  colour = Sex), alpha = 0.2) +
+  scale_colour_brewer(palette = "Set1") + 
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12),
+    legend.position = 'none',
+    aspect.ratio = 1) +
+  xlab("Standardised Body condition") +
+  ylab("Survival probability [mean \U00B1 SE]") +
+  scale_y_continuous(expand = c(0,0), limits = c(0,1),
+                     breaks = seq(0, 1, 0.2)) +
+  facet_wrap(~ageclass)
+p.cond
+```
+
+##### Effect of NAO
+
+```{r, message=FALSE, warning=FALSE}
+djfm.values = seq(from = min(ddl$S$djfm),
+                  to = max(ddl$S$djfm),
+                  length.out = 100)
+
+## Extract get par.index of interest
+index.meta <- data.frame(
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "ageclass", "djfm")]) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(djfm, ageclass)) 
+
+## simplify, one par.index for each dummy var
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>% 
+  unlist()
+
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+pred.djfm <- covariate.predictions(
+  supported.models, 
+  data = data.frame(
+    djfm = djfm.values, bl.index.sq = djfm.values^2), 
+  indices = index.meta$par.index)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(pred.djfm,
+                        index.meta[,c("par.index", "ageclass")],
+                        by = "par.index") %>% 
+  mutate(Group = ageclass)
+head(pred.model)
+
+pred.model <- left_join(
+  index.meta,
+  pred.model[,c("par.index", "estimate", "lcl", "ucl", "se", "ageclass", "Group")]) %>% 
+  unique.data.frame()
+
+p.djfm <- 
+  ggplot(pred.model, aes(x = djfm, y = estimate, group = Group)) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.2) 
+  scale_colour_brewer(palette = "Set1") + 
+  theme_classic() +
+  theme(legend.position = 'none',
+        panel.border = element_rect(fill = NA),
+        panel.background = element_rect(fill = "Grey95"),
+        text = element_text(size = 12),
+        aspect.ratio = 1) +
+  xlab("DJFM NAO") +
+  ylab("Survival probability [mean \U00B1 CI]") +
+  facet_wrap(~age)
+
+p.djfm
+ggsave("../../../../Dropbox/SurvivalPaper/figures/survival_winterNAO.tiff",
+       dpi = 144, width = 6, height = 6)
+```
+
+##### Effect of Leucocytozoon
+
+```{r, message=FALSE, warning=FALSE}
+leuco = 0:4
+
+## Extract get par.index of interest
+index.meta <- data.frame(
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "ageclass")]) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(ageclass)) 
+
+## simplify, one par.index for each dummy var
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>% 
+  unlist()
+
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+pred.leuco <- covariate.predictions(
+  supported.models, 
+  data = data.frame(
+    Lprev = leuco, bl.index.sq = leuco^2), 
+  indices = index.meta$par.index)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(pred.leuco, index.meta[,c("par.index", "ageclass")], by = "par.index") %>% 
+  mutate(Group = ageclass)
+
+pred.model <- left_join(index.meta, pred.model[,c("par.index", "Lprev", "estimate", "lcl", "ucl", "se", "ageclass", "Group")]) %>% 
+  unique.data.frame()
+
+p.leuco <- 
+  ggplot(pred.model, aes(x = Lprev, y = estimate, group = ageclass)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
+  geom_point(size = 3, colour = "Black", shape = 15) +
+  scale_colour_brewer(palette = "Set1") + 
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12),
+    legend.position = 'bottom',
+    aspect.ratio = 1) +
+  xlab("Leucozytozoon infection intensity") +
+  ylab("Survival probability [mean \U00B1 SE]") +
+  facet_wrap(~ageclass)
+
+p.leuco
+```
+
+##### Effect of Carnus Carnus 
+
+```{r, message=FALSE, warning=FALSE}
+ekto = 0:4
+
+## Extract get par.index of interest
+index.meta <- data.frame(
+  age = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "age")]) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(age)) 
+
+## simplify, one par.index for each dummy var
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>% 
+  unlist()
+
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+pred.ekto <- covariate.predictions(
+  supported.models, 
+  data = data.frame(
+    Ekto = ekto, bl.index.sq = ekto^2), 
+  indices = index.meta$par.index)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(pred.ekto, index.meta[,c("par.index", "age")], by = "par.index") %>% 
+  mutate(Group = age)
+head(pred.model)
+
+
+## Das sind nur die model outputs und 
+## die sequenz djfm.values ist nicht berücksichtigt
+## für die Kalkulation. Warum ?
+## Problem weil DJFM und Time confounded
+
+pred.model <- left_join(index.meta, pred.model[,c("par.index", "Ekto", "estimate", "lcl", "ucl", "age", "Group")]) %>% 
+  unique.data.frame()
+
+p.ekto <- 
+  ggplot(pred.model, aes(x = Ekto, y = estimate, group = age)) +
+  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = .25, size = 1.5) +
+  geom_point(size = 3, colour = "Black", shape = 15) +
+  scale_colour_brewer(palette = "Set1") + 
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12),
+    legend.position = 'bottom',
+    aspect.ratio = 1) +
+  xlab("Ektoparasite infection intensity") +
+  ylab("Survival probability [mean \U00B1 CI]") +
+  facet_wrap(~age)
+
+p.ekto
+```
+
+#### Resighting probabilies
+
+All supported models contain a time dependent effect on resighting probabilties, with an average estimate of `r mean(mod.avg.p$estimate)` (range: `r min(mod.avg.p$estimate)` - `r max(mod.avg.p$estimate)`) .
+
+```{r, message=FALSE, warning=FALSE}
+p.res <- ggplot(p.effect, aes(x = x, 
+                              y = estimate,
+                              col = Age)) +
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
+  geom_point(size = 1.5, shape = 15) +
+  xlab("Year") +
+  ylab("Resighting probability [mean \U00B1 SE]") +
+  scale_x_continuous(breaks = seq(2008, 2020, 3)) + 
+  scale_y_continuous(expand = c(0,0), 
+                     limits = c(0,1),
+                     breaks = seq(0, 1, .2)) 
+p.res
+```
+
+#### Recovery chances
+
+```{r}
+mod.avg.r$x <-  c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2)
+ 
+p.recov <- ggplot(mod.avg.r, aes(x = x, y = estimate, col = Sex)) +
+  theme_classic() +
+  theme(legend.position = "none",
+        legend.background = element_rect(fill = NA),
+        panel.border = element_rect(fill = NA),
+        panel.background = element_rect(fill = "Grey95"),
+        text = element_text(size = 12)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
+  geom_point(size = 3, shape = 15) +
+  xlab("Age class") +
+  ylab("Recovery chances [mean \U00B1 SE]") +
+  scale_x_continuous(breaks = c(1:4), labels = c("CY1", "CY2", "CY3", "CY4plus")) +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(-0.2,1.2),
+                     breaks = seq(0, 1, .2)) +
+  scale_colour_brewer(palette = "Set1")
+
+p.recov
+```
+
+
+
+#### Site-fidelity
+
+For a reason that still needs exploration, it is not possible to compute estimates for site fidelity of second and third year individuals, but for CY1 and CY4plus it is.
+
+```{r, message=FALSE, warning=FALSE}
+mod.avg.F$x <-  c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2)
+ 
+p.fidel <- ggplot(mod.avg.F, aes(x = x, y = estimate, col = Sex)) +
+  theme_classic() +
+  theme(legend.position = "none",
+        legend.background = element_rect(fill = NA),
+        panel.border = element_rect(fill = NA),
+        panel.background = element_rect(fill = "Grey95"),
+        text = element_text(size = 12)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
+  geom_point(size = 3, shape = 15) +
+  xlab("Age class") +
+  ylab("Site fidelity [mean \U00B1 SE]") +
+  scale_x_continuous(breaks = c(1:4), labels = c("CY1", "CY2", "CY3", "CY4plus")) +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,1.2),
+                     breaks = seq(0, 1, .2)) +
+  scale_colour_brewer(palette = "Set1")
+
+p.fidel
+```
+
+
+# D.) Known cases of first year survival
+
+```{r}
+## identify all cases where individuals died during the first year of life
+dead <-
+  filter(ringing_data,
+         Dead == 'Yes',
+         !CauseDeath %in% c('Jumper', 'Poisoned', 'Shot')) %>% 
+  mutate(HatchingDate = as.Date(paste0(Year, "-01-01")) + Hatch) %>% 
+  mutate(DaysSinceHatching = as.Date(DateDeath) - HatchingDate) %>% 
+    filter(., DaysSinceHatching <= 366)
+
+dead <- dead$Ring
+
+## Identify all cases where individuals where alive after completing the first
+## year of life, i.e. were resighted
+alive <- resighting_data %>% 
+  filter(DaysSinceHatching > 365)
+alive <- alive$Ring %>% unique()
+
+df <- data.frame(Ring = c(dead, alive), 
+                 Group = c(rep("Dead", length(dead)), rep("Alive", length(alive)))) %>% 
+  left_join(., ringing_data, by = "Ring") %>% 
+  mutate(surv = ifelse(Group == "Dead", 0, 1)) %>% 
+  mutate(Leucocytozoon = ifelse(Lbinom == 0, "Uninfected", "Infected")) %>% 
+  mutate(Carnus = ifelse(Ekto == 0, "Uninfected", "Infected")) %>% 
+  mutate(Morph = case_when(
+    Morph == "2" ~ "Dark",
+    Morph == "3" ~ "Intermediate",
+    Morph == "4" ~ "Light")) %>% 
+  mutate(Hatch = scale(Hatch))
+
+
+# models <- list(
+#   glmer(surv ~ Leucocytozoon + Sex + Morph + Condition + (1|Year),
+#         data = df, family = "binomial"), 
+#   glmer(surv ~ Leucocytozoon + Carnus + Sex + Morph + Condition + (1|Year),
+#         data = df, family = "binomial"), 
+#   glmer(surv ~ Carnus + Sex + Morph + Condition + (1|Year),
+#         data = df, family = "binomial"), 
+#   glmer(surv ~ Leucocytozoon + Sex + Morph + Condition + (1|Year),
+#         data = df, family = "binomial"),
+#   glmer(surv ~ Leucocytozoon + (1|Year),
+#         data = df, family = "binomial")
+# ) %>%
+#   set_names(., paste0('M', 1:length(.)))
+
+# Model selection based on AICc
+#AICcmodavg::aictab(models, second.ord = T, sort = T)
+
+model <- glmer(
+  surv ~ Leucocytozoon + cond + Sex + Carnus + Hatch + (1|Year) ,
+               data = df,
+               family = "binomial")
+
+model.plot <- plot_model(model = model, sort.est = TRUE, transform = NULL,
+           title = "",
+           ci.lvl = .95,
+           ci.style = "whisker",
+           dot.size = 3,
+           line.size = 1.2,
+           ) +
+  theme_classic(base_size = 12) +
+  geom_hline(yintercept = 0, lty = "dashed") +
+  ylab("Effect size") + xlab("Model parameter") +
+  ggtitle(label = "First year survival", 
+          subtitle = paste0(" (Survived: ", length(df$surv[df$surv == 1]),
+                            " Died: ", length(df$surv[df$surv == 0]), ")")) 
+model.plot
+
+x<-modelsummary::modelsummary(glm(surv ~ Leucocytozoon + Condition + Sex +
+                 Carnus + Hatch,
+               data = df,
+               family = "binomial"))
+
+# +
+#   scale_x_discrete(labels = c("Leucocytozoon [Uninfected]", 
+#                               "Morph [Intermediate]",
+#                               "Sex [Male]",
+#                               "Carnus [Uninfected]",
+#                               "Brood rank",
+#                               "Morph [Light]",
+#                               "Body conditon"))
+model.plot  
+ggplot2::ggsave(
+  model.plot,
+  filename = "../../../../Dropbox/SurvivalPaper/figures/GLMM_ForestPlot.tiff", device = "tiff",   width = 6, height = 6, dpi = 300)
+
+plot <- plot_model(mod, transform = NULL,
+           type = "re",
+           title = "",
+           ci.lvl = .95,
+           ci.style = "whisker",
+           dot.size = 3,
+           line.size = 1.2,
+) +
+  theme_classic(base_size = 12) +
+  geom_hline(yintercept = 0, lty = "dashed") 
+ggplot2::ggsave(plot,
+  filename = "../../../../Dropbox/SurvivalPaper/figures/GLMM_ForestPlot_RE.tiff", device = "tiff",   width = 6, height = 6, dpi = 300)
+```
+
+
+#### Acknowledgements
+
+The implemenation for calculating the adjusted $\hat C$ via bootstrapping was based on a modified R code created by Michael J. Conroy (accessed from https://sites.google.com/site/cmrsoftware/lecture-lab-schedule/6---model-fit-and-mmi/methods-for-assessing-fit)
+
+## Appendix
+
+#####  Hatching date
+
+```{r, message=FALSE, warning=FALSE, eval=FALSE}
+Hatch.index.values = 
+  seq(from =  min(df$Hatch), to = max(df$Hatch), length.out = 100)
+
+## Extract get 'par.index' of interest
+index.meta <- data.frame(
+  Sex = rep(c("Female", "Male"), each = 4),
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 2)) %>% 
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "Sex", "ageclass")],
+            by = c("Sex", "ageclass")) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(Sex, ageclass)) 
+
+## simplify, one par.index for each dummy var
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>% 
+  unlist()
+
+## subset index.meta
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+## get estimates from the model
+pred.model <- covariate.predictions(
+  supported.models, 
+  data = data.frame(
+    Hatch = Hatch.index.values, Hacth.index.sq = Hatch.index.values^2), 
+  indices = model.indices %>% as.numeric(),
+  drop = T)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(pred.model,
+                        index.meta[,c("par.index", "ageclass", "Sex")],
+                        by = "par.index") %>% 
+  mutate(Group = paste0(Sex, ageclass))
+head(pred.model)
+
+p.hatch <- 
+  ggplot(pred.model, aes(x = Hatch, y = estimate, group = Group)) +
+  geom_line(size = 1.5,aes(colour = Sex)) +
+  geom_ribbon(aes(ymin = lcl, ymax = ucl, colour = Sex), alpha = 0.2) +
+  scale_colour_brewer(palette = "Set1") + 
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12),
+    legend.position = 'none',
+    aspect.ratio = 1) +
+  xlab("Standardised Hatching date") +
+  ylab("Survival probability [mean \U00B1 CI]") +
+  scale_y_continuous(expand = c(0,0), 
+                     limits = c(0,1),
+                     breaks = seq(0, 1, .2)) +
+  facet_wrap(~ageclass)
+p.hatch
+```
+
+##### Morph
+
+```{r, message=FALSE, warning=FALSE, eval=FALSE}
+Morph = 2:4
+
+## Extract get par.index of interest
+index.meta <- data.frame(
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "ageclass")]) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(ageclass)) 
+
+## simplify, one par.index for each dummy var
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>% 
+  unlist()
+
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+pred.Morph <- covariate.predictions(
+  supported.models, 
+  data = data.frame(
+    Morph = Morph, bl.index.sq = Morph^2), 
+  indices = index.meta$par.index)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(pred.Morph,
+                        index.meta[,c("par.index", "ageclass")],
+                        by = "par.index") %>% 
+  mutate(Group = ageclass)
+
+pred.model <- left_join(index.meta, pred.model[,c("par.index", "Morph", "estimate", "se", "lcl", "ucl", "ageclass", "Group")]) %>% 
+  unique.data.frame()
+
+pred.model$Morph <- factor(pred.model$Morph,
+                           labels = c("Dark", "Intermediate", "Light") )
+
+p.Morph <- 
+  ggplot(pred.model, aes(x = as.factor(Morph),
+                         y = estimate,
+                         group = ageclass)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
+  geom_point(size = 3, colour = "Black", shape = 15) +
+  scale_colour_brewer(palette = "Set1") + 
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12),
+    legend.position = 'bottom',
+    aspect.ratio = 1) +
+  xlab("Plumage Morph") +
+  ylab("Survival probability [mean \U00B1 SE]") +
+  facet_wrap(~ageclass) +
+  scale_y_continuous(expand = c(0,0), 
+                     limits = c(0,1),
+                     breaks = seq(0, 1, .2)) 
+
+p.Morph
+```
+
+
+##### Brood Rank
+
+```{r, message=FALSE, warning=FALSE}
+Rank = 1:4
+
+## Extract get par.index of interest
+index.meta <- data.frame(
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "ageclass")]) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(ageclass)) 
+
+## simplify, one par.index for each dummy var
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>% 
+  unlist()
+
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+pred.rank <- covariate.predictions(
+  supported.models, 
+  data = data.frame(
+    Rank = Rank, bl.index.sq = Rank^2), 
+  indices = index.meta$par.index)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(pred.rank, index.meta[,c("par.index", "ageclass")], by = "par.index") %>% 
+  mutate(Group = ageclass)
+
+pred.model <- left_join(index.meta, pred.model[,c("par.index", "Rank", "estimate", "lcl", "ucl", "ageclass", "Group")]) %>% 
+  unique.data.frame()
+
+p.rank <- 
+  ggplot(pred.model, aes(x = Rank, y = estimate, group = ageclass)) +
+  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = .25, size = 1.5) +
+  geom_point(size = 3, colour = "Black", shape = 15) +
+  scale_colour_brewer(palette = "Set1") + 
+  theme_classic() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    panel.background = element_rect(fill = "Grey95"),
+    text = element_text(size = 12),
+    legend.position = 'bottom',
+    aspect.ratio = 1) +
+  xlab("Brood Rank") +
+  ylab("Survival probability [mean \U00B1 CI]") +
+  facet_wrap(~ageclass)
+
+p.rank
+```
+
+
+## Literature cited
+
+[^1]: Lebreton, J. D., Burnham, K. P., Clobert, J., & Anderson, D. R. (1992). Modeling survival and testing biological hypotheses using marked animals: a unified approach with case studies. Ecological monographs, 62(1), 67-118.
+[^2]: White, G. C., & Burnham, K. P. (1999). Program MARK: survival estimation from populations of marked animals. Bird study, 46(sup1), S120-S139.
+[^3]: Laake, J. L. (2013). RMark: an R interface for analysis of capture-recapture data with MARK.
+[^4]: Burnham, K., & Anderson, D. (2002). Model selection and multi‐model inference: A practical information‐theoretic approach (2nd ed.). New York, NY: Springer.
+[^5]: McClintock, B. T., & White, G. C. (2012). From NOREMARK to MARK: software for estimating demographic parameters using mark–resight methodology. Journal of Ornithology, 152(2), 641-650.
+[^6]: Afroz, F., Parry, M., & Fletcher, D. (2019). Estimating overdispersion in sparse multinomial data. Biometrics.
+[^7]: Reneerkens, J., Versluijs, T. S., Piersma, T., Alves, J. A., Boorman, M., Corse, C., ... & Ntiamoa‐Baidu, Y. (2019). Low fitness at low latitudes: Wintering in the tropics increases migratory delays and mortality rates in an Arctic breeding shorebird. Journal of Animal Ecology.
+[^8]:Hurrell, J.W., Kushnir, Y., Ottersen, G. & Visbeck, M. (2003). An overview of the North Atlantic oscillation. The North Atlantic Oscillation: climatic significance and environmental impact, 134, 1–35.
