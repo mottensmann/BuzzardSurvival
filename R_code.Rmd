@@ -186,6 +186,8 @@ ddl$p <- ddl$p %>%
              age == 2 ~ "CY3",
              age >= 3 ~ "CY4plus"
            ))
+## Goodness of fit using RELEASE
+release.gof(dp)
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
@@ -448,162 +450,71 @@ save(supported.models, file = paste0("data/supported.models.", suffix, ".RData")
 
 ### Results
 
-As the execution of the model 
+As the execution of the models is time consuming, we provide the captured output as part of the repository 
 
 ```{r}
 ## load previously saved results
-suffix <- '2020-10-0522-27-47'
-load(paste0("RData/models.", suffix, ".RData"))
-load(paste0("RData/models.adj.", suffix, ".RData"))
-load(paste0("RData/supported.models.", suffix, ".RData"))
+#suffix <- '2020-10-0522-27-47'
+suffix <- '2020-10-0820-59-18'
+
+load(paste0("data/models.", suffix, ".RData"))
+load(paste0("data/models.adj.", suffix, ".RData"))
+load(paste0("data/supported.models.", suffix, ".RData"))
 ```
 
 #### Model averaging
 
 ```{r, message=FALSE, warning=FALSE}
-## get all S estimates and their confidence 
-S.estimates <- model.average(supported.models, parameter = "S", drop = T, vcv = T)[["estimates"]] %>% 
+## Model average Survival estimates (S) 
+S.mod.avg <- model.average(supported.models, parameter = "S", drop = T, vcv = T)[["estimates"]] %>% 
   subset(., select = c(estimate, se, lcl, ucl, age, Sex))
 
-## compute means for sex and age combinations
-comb <- list(list(Sex = "Male", age = 0, ageclass = "CY1"), # CY1
-             list(Sex = "Male", age = 1, ageclass = "CY2"),
-             list(Sex = "Male", age = 2, ageclass = "CY3"),
-             list(Sex = "Male", age = 3:13, ageclass = "CY4plus"),
-             list(Sex = "Female", age = 0, ageclass = "CY1"), # CY1
-             list(Sex = "Female", age = 1, ageclass = "CY2"),
-             list(Sex = "Female", age = 2, ageclass = "CY3"),
-             list(Sex = "Female", age = 3:13, ageclass = "CY4plus")
-             )
-age.effect <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(S.estimates, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl),
-             se = mean(dx$se),
-             Sex = comb[[x]]$Sex,
-             Age = comb[[x]]$ageclass)
-}) %>% 
-  do.call("rbind",.)
-
-mod.avg.F <- model.average(models.adj, parameter = "F", vcv = T, drop = T)$estimates %>% 
+## Model average Fidelity estimates (F)
+F.mod.avg <- model.average(models.adj, parameter = "F", vcv = T, drop = T)$estimates %>% 
   subset(., select = (c(estimate, se, lcl, ucl, time, age, Sex))) %>% 
   unique.data.frame() 
 
-mod.avg.F <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(mod.avg.F, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl), 
-             se = mean(dx$se),
-             Sex = comb[[x]]$Sex,
-             Age = comb[[x]]$ageclass)
-}) %>% 
-  do.call("rbind",.)
-
-mod.avg.r <- model.average(models.adj, parameter = "r", vcv = T, drop = T)$estimates %>% 
+## Model average recovery estimates (r)
+r.mod.avg <- model.average(models.adj, parameter = "r", vcv = T, drop = T)$estimates %>% 
   subset(., select = (c(estimate, se, lcl, ucl, time, age, Sex))) %>% 
   unique.data.frame() 
 
-mod.avg.r <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(mod.avg.r, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl), 
-             se = mean(dx$se),
-             Sex = comb[[x]]$Sex,
-             Age = comb[[x]]$ageclass)
-}) %>% 
-  do.call("rbind",.)
-
-# query time as well
-mod.avg.p <- model.average(models.adj, parameter = "p", vcv = T, drop = T)$estimates %>% 
+## Model average resighting estimates (p)
+p.mod.avg <- model.average(models.adj, parameter = "p", vcv = T, drop = T)$estimates %>% 
   subset(., select = (c(estimate, se, lcl, ucl, time, age))) %>% 
   unique.data.frame() 
-
-## compute means for sex and age combinations
-## exclude fixed values for know
-comb <- list(
-  list(time = 2008, age = 1, Age = "CY2"),
- 
-  list(time = 2009, age = 1, Age = "CY2"),
-  list(time = 2009, age = 2, Age = "CY3"),
-  
-  list(time = 2010, age = 1, Age = "CY2"),
-  list(time = 2010, age = 2, Age = "CY3"),
-  list(time = 2010, age = 3:13, Age = "CY4+"),           
-  
-  list(time = 2011, age = 1, Age = "CY2"),
-  list(time = 2011, age = 2, Age = "CY3"),
-  list(time = 2011, age = 3:13, Age = "CY4+"),           
- 
-  list(time = 2012, age = 1, Age = "CY2"),
-  list(time = 2012, age = 2, Age = "CY3"),
-  list(time = 2012, age = 3:13, Age = "CY4+"),         
-  
-  list(time = 2013, age = 1, Age = "CY2"),
-  list(time = 2013, age = 2, Age = "CY3"),
-  list(time = 2013, age = 3:13, Age = "CY4+"),         
-
-  list(time = 2014, age = 1, Age = "CY2"),
-  list(time = 2014, age = 2, Age = "CY3"),
-  list(time = 2014, age = 3:13, Age = "CY4+"),         
-
-  list(time = 2015, age = 1, Age = "CY2"),
-  list(time = 2015, age = 2, Age = "CY3"),
-  list(time = 2015, age = 3:13, Age = "CY4+"),         
-
-  list(time = 2016, age = 1, Age = "CY2"),
-  list(time = 2016, age = 2, Age = "CY3"),
-  list(time = 2016, age = 3:13, Age = "CY4+"),         
-
-  list(time = 2017, age = 1, Age = "CY2"),
-  list(time = 2017, age = 2, Age = "CY3"),
-  list(time = 2017, age = 3:13, Age = "CY4+"),         
-
-  list(time = 2018, age = 1, Age = "CY2"),
-  list(time = 2018, age = 2, Age = "CY3"),
-  list(time = 2018, age = 3:13, Age = "CY4+"),         
-
-  list(time = 2019, age = 1, Age = "CY2"),
-  list(time = 2019, age = 2, Age = "CY3"),
-  list(time = 2019, age = 3:13, Age = "CY4+"),         
-
-  list(time = 2020, age = 1, Age = "CY2"),
-  list(time = 2020, age = 2, Age = "CY3"),
-  list(time = 2020, age = 3:13, Age = "CY4+")         
-)
-p.effect <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(mod.avg.p, time == comb[[x]]$time, age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl),
-             se = mean(dx$se),
-             time = comb[[x]]$time,
-             Age = comb[[x]]$Age)
-}) %>% 
-  do.call("rbind",.) %>% 
-  mutate(x = case_when(
-    Age == "CY2" ~ time - 0.25,
-    Age == "CY3" ~ time,
-    Age == "CY4+" ~ time + 0.25
-  ))
 ```
 
 #### Survival probabilites
 
-##### Effect of Age
+##### Age
 
 ```{r, message=FALSE, warning=FALSE}
-age.effect$x <- c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2)
+## Compute means for sex by age combinations
+comb <- list(list(Sex = "Male", age = 0, ageclass = "CY1"), 
+             list(Sex = "Male", age = 1, ageclass = "CY2"),
+             list(Sex = "Male", age = 2, ageclass = "CY3"),
+             list(Sex = "Male", age = 3:13, ageclass = "CY4plus"),
+             list(Sex = "Female", age = 0, ageclass = "CY1"), 
+             list(Sex = "Female", age = 1, ageclass = "CY2"),
+             list(Sex = "Female", age = 2, ageclass = "CY3"),
+             list(Sex = "Female", age = 3:13, ageclass = "CY4plus")
+             )
+df.S.age <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(S.mod.avg, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl),
+             se = mean(dx$se),
+             Sex = comb[[x]]$Sex,
+             Age = comb[[x]]$ageclass)
+}) %>% 
+  do.call("rbind",.) %>% 
+  mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
 
 p.age <- 
-  ggplot(age.effect, aes(x = x, y = estimate, col = Sex, fill = Sex)) +
-#  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = .25, size = 1) +
+  ggplot(df.S.age, aes(x = x, y = estimate, col = Sex, fill = Sex)) +
   geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1) +
   geom_point(size = 3, shape = 15) +
   theme_classic() +
@@ -628,7 +539,7 @@ p.age
 ```
 
 
-##### Effect of Condition
+##### Condition
 
 ```{r message=FALSE, warning=FALSE}
 # create values of cond.index to use for predictions
@@ -645,14 +556,14 @@ index.meta <- data.frame(
   mutate(dummy = paste0(Sex, ageclass)) 
 
 ## simplify, one par.index for each dummy var
-model.indices <- sapply(unique(index.meta$dummy), function(x) {
-  ## return first row matching the query
-  index.meta[index.meta$dummy == x,"par.index"][1]
-}) %>% 
-  unlist()
+# model.indices <- sapply(unique(index.meta$dummy), function(x) {
+#   ## return first row matching the query
+#   index.meta[index.meta$dummy == x,"par.index"][1]
+# }) %>% 
+#   unlist()
 
 ## subset index.meta
-index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+#index.meta <- index.meta[index.meta$par.index %in% model.indices,]
 
 ## get estimates from the model
 pred.model <- covariate.predictions(
@@ -691,7 +602,7 @@ p.cond <-
 p.cond
 ```
 
-##### Effect of NAO
+##### NAO
 
 ```{r, message=FALSE, warning=FALSE}
 djfm.values = seq(from = min(ddl$S$djfm),
@@ -706,11 +617,13 @@ index.meta <- data.frame(
   ## code additional vars
   mutate(dummy = paste0(djfm, ageclass)) 
 
-## simplify, one par.index for each dummy var
+## simplify, one par.index for each dummy var.
+## Predictions are identicalusing the full model but
+## cause memory problems.
 model.indices <- sapply(unique(index.meta$dummy), function(x) {
   ## return first row matching the query
   index.meta[index.meta$dummy == x,"par.index"][1]
-}) %>% 
+}) %>%
   unlist()
 
 index.meta <- index.meta[index.meta$par.index %in% model.indices,]
@@ -753,7 +666,7 @@ ggsave("../../../../Dropbox/SurvivalPaper/figures/survival_winterNAO.tiff",
        dpi = 144, width = 6, height = 6)
 ```
 
-##### Effect of Leucocytozoon
+##### Leucocytozoon
 
 ```{r, message=FALSE, warning=FALSE}
 leuco = 0:4
@@ -807,7 +720,7 @@ p.leuco <-
 p.leuco
 ```
 
-##### Effect of Carnus Carnus 
+##### Carnus 
 
 ```{r, message=FALSE, warning=FALSE}
 ekto = 0:4
@@ -873,6 +786,76 @@ p.ekto
 All supported models contain a time dependent effect on resighting probabilties, with an average estimate of `r mean(mod.avg.p$estimate)` (range: `r min(mod.avg.p$estimate)` - `r max(mod.avg.p$estimate)`) .
 
 ```{r, message=FALSE, warning=FALSE}
+## compute means for sex and age combinations
+## exclude fixed values for know
+comb <- list(
+  list(time = 2008, age = 1, Age = "CY2"),
+ 
+  list(time = 2009, age = 1, Age = "CY2"),
+  list(time = 2009, age = 2, Age = "CY3"),
+  
+  list(time = 2010, age = 1, Age = "CY2"),
+  list(time = 2010, age = 2, Age = "CY3"),
+  list(time = 2010, age = 3:13, Age = "CY4+"),           
+  
+  list(time = 2011, age = 1, Age = "CY2"),
+  list(time = 2011, age = 2, Age = "CY3"),
+  list(time = 2011, age = 3:13, Age = "CY4+"),           
+ 
+  list(time = 2012, age = 1, Age = "CY2"),
+  list(time = 2012, age = 2, Age = "CY3"),
+  list(time = 2012, age = 3:13, Age = "CY4+"),         
+  
+  list(time = 2013, age = 1, Age = "CY2"),
+  list(time = 2013, age = 2, Age = "CY3"),
+  list(time = 2013, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2014, age = 1, Age = "CY2"),
+  list(time = 2014, age = 2, Age = "CY3"),
+  list(time = 2014, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2015, age = 1, Age = "CY2"),
+  list(time = 2015, age = 2, Age = "CY3"),
+  list(time = 2015, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2016, age = 1, Age = "CY2"),
+  list(time = 2016, age = 2, Age = "CY3"),
+  list(time = 2016, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2017, age = 1, Age = "CY2"),
+  list(time = 2017, age = 2, Age = "CY3"),
+  list(time = 2017, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2018, age = 1, Age = "CY2"),
+  list(time = 2018, age = 2, Age = "CY3"),
+  list(time = 2018, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2019, age = 1, Age = "CY2"),
+  list(time = 2019, age = 2, Age = "CY3"),
+  list(time = 2019, age = 3:13, Age = "CY4+"),         
+
+  list(time = 2020, age = 1, Age = "CY2"),
+  list(time = 2020, age = 2, Age = "CY3"),
+  list(time = 2020, age = 3:13, Age = "CY4+")         
+)
+p.effect <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(p.mod.avg, time == comb[[x]]$time, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl),
+             se = mean(dx$se),
+             time = comb[[x]]$time,
+             Age = comb[[x]]$Age)
+}) %>% 
+  do.call("rbind",.) %>% 
+  mutate(x = case_when(
+    Age == "CY2" ~ time - 0.25,
+    Age == "CY3" ~ time,
+    Age == "CY4+" ~ time + 0.25
+  ))
+
+
 p.res <- ggplot(p.effect, aes(x = x, 
                               y = estimate,
                               col = Age)) +
@@ -892,10 +875,21 @@ p.res <- ggplot(p.effect, aes(x = x,
 p.res
 ```
 
-#### Recovery chances
+#### Recovery probabilites
 
 ```{r}
-mod.avg.r$x <-  c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2)
+mod.avg.r <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(r.mod.avg, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl), 
+             se = mean(dx$se),
+             Sex = comb[[x]]$Sex,
+             Age = comb[[x]]$ageclass)
+}) %>% 
+  do.call("rbind",.) %>% 
+  mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
  
 p.recov <- ggplot(mod.avg.r, aes(x = x, y = estimate, col = Sex)) +
   theme_classic() +
@@ -919,14 +913,25 @@ p.recov
 
 
 
-#### Site-fidelity
+#### Fidelity (F)
 
 For a reason that still needs exploration, it is not possible to compute estimates for site fidelity of second and third year individuals, but for CY1 and CY4plus it is.
 
 ```{r, message=FALSE, warning=FALSE}
-mod.avg.F$x <-  c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2)
+df.F <- 
+lapply(1:length(comb), function(x) {
+  dx <- filter(F.mod.avg, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
+  data.frame(estimate = mean(dx$estimate),
+             lcl = mean(dx$lcl), 
+             ucl = mean(dx$ucl), 
+             se = mean(dx$se),
+             Sex = comb[[x]]$Sex,
+             Age = comb[[x]]$ageclass)
+}) %>% 
+  do.call("rbind",.) %>% 
+  mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
  
-p.fidel <- ggplot(mod.avg.F, aes(x = x, y = estimate, col = Sex)) +
+p.fidel <- ggplot(df.F, aes(x = x, y = estimate, col = Sex)) +
   theme_classic() +
   theme(legend.position = "none",
         legend.background = element_rect(fill = NA),
@@ -967,6 +972,7 @@ alive <- resighting_data %>%
   filter(DaysSinceHatching > 365)
 alive <- alive$Ring %>% unique()
 
+## merge to dataframe
 df <- data.frame(Ring = c(dead, alive), 
                  Group = c(rep("Dead", length(dead)), rep("Alive", length(alive)))) %>% 
   left_join(., ringing_data, by = "Ring") %>% 
@@ -977,32 +983,18 @@ df <- data.frame(Ring = c(dead, alive),
     Morph == "2" ~ "Dark",
     Morph == "3" ~ "Intermediate",
     Morph == "4" ~ "Light")) %>% 
-  mutate(Hatch = scale(Hatch))
-
-
-# models <- list(
-#   glmer(surv ~ Leucocytozoon + Sex + Morph + Condition + (1|Year),
-#         data = df, family = "binomial"), 
-#   glmer(surv ~ Leucocytozoon + Carnus + Sex + Morph + Condition + (1|Year),
-#         data = df, family = "binomial"), 
-#   glmer(surv ~ Carnus + Sex + Morph + Condition + (1|Year),
-#         data = df, family = "binomial"), 
-#   glmer(surv ~ Leucocytozoon + Sex + Morph + Condition + (1|Year),
-#         data = df, family = "binomial"),
-#   glmer(surv ~ Leucocytozoon + (1|Year),
-#         data = df, family = "binomial")
-# ) %>%
-#   set_names(., paste0('M', 1:length(.)))
-
-# Model selection based on AICc
-#AICcmodavg::aictab(models, second.ord = T, sort = T)
+  mutate(Hatch = scale(Hatch)) %>% 
+  mutate(Age = scale(Age_days))
 
 model <- glmer(
-  surv ~ Leucocytozoon + cond + Sex + Carnus + Hatch + (1|Year) ,
+  surv ~ Leucocytozoon + cond + Sex + Carnus + Hatch + Age + (1|Year) ,
                data = df,
                family = "binomial")
 
 model.plot <- plot_model(model = model, sort.est = TRUE, transform = NULL,
+                         
+                         
+                         
            title = "",
            ci.lvl = .95,
            ci.style = "whisker",
@@ -1016,37 +1008,12 @@ model.plot <- plot_model(model = model, sort.est = TRUE, transform = NULL,
           subtitle = paste0(" (Survived: ", length(df$surv[df$surv == 1]),
                             " Died: ", length(df$surv[df$surv == 0]), ")")) 
 model.plot
-
-x<-modelsummary::modelsummary(glm(surv ~ Leucocytozoon + Condition + Sex +
-                 Carnus + Hatch,
-               data = df,
-               family = "binomial"))
-
-# +
-#   scale_x_discrete(labels = c("Leucocytozoon [Uninfected]", 
-#                               "Morph [Intermediate]",
-#                               "Sex [Male]",
-#                               "Carnus [Uninfected]",
-#                               "Brood rank",
-#                               "Morph [Light]",
-#                               "Body conditon"))
-model.plot  
-ggplot2::ggsave(
-  model.plot,
-  filename = "../../../../Dropbox/SurvivalPaper/figures/GLMM_ForestPlot.tiff", device = "tiff",   width = 6, height = 6, dpi = 300)
-
-plot <- plot_model(mod, transform = NULL,
-           type = "re",
-           title = "",
-           ci.lvl = .95,
-           ci.style = "whisker",
-           dot.size = 3,
-           line.size = 1.2,
-) +
-  theme_classic(base_size = 12) +
-  geom_hline(yintercept = 0, lty = "dashed") 
-ggplot2::ggsave(plot,
-  filename = "../../../../Dropbox/SurvivalPaper/figures/GLMM_ForestPlot_RE.tiff", device = "tiff",   width = 6, height = 6, dpi = 300)
+tab_model(model,
+          show.stat = T,
+          string.est = "Estimate",
+          string.ci = "95% CI",
+          transform = NULL,
+          collapse.ci = F)
 ```
 
 

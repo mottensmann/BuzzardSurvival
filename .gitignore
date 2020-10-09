@@ -10,3 +10,4 @@ subset_buzzard_db.R
 *.out
 *.res
 *.vcv
+*.tmp
