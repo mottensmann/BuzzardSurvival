@@ -188,6 +188,7 @@ ddl$p <- ddl$p %>%
            ))
 ## Goodness of fit using RELEASE
 release.gof(dp)
+rm(covars); rm(nao); 
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
@@ -528,7 +529,7 @@ p.age <-
     legend.background = element_rect(fill = NA),
     aspect.ratio = 1) +
   scale_colour_brewer(palette = "Set1", direction = -1) +
-  scale_x_continuous(breaks = 1:4, labels = unique(age.effect$Age)) +
+  scale_x_continuous(breaks = 1:4, labels = unique(df.S.age$Age)) +
   scale_y_continuous(expand = c(0,0), 
                      limits = c(0,1),
                      breaks = seq(0, 1, .2)) +
@@ -556,20 +557,20 @@ index.meta <- data.frame(
   mutate(dummy = paste0(Sex, ageclass)) 
 
 ## simplify, one par.index for each dummy var
-# model.indices <- sapply(unique(index.meta$dummy), function(x) {
-#   ## return first row matching the query
-#   index.meta[index.meta$dummy == x,"par.index"][1]
-# }) %>% 
-#   unlist()
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>%
+  unlist()
 
 ## subset index.meta
-#index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
 
 ## get estimates from the model
 pred.model <- covariate.predictions(
   supported.models, 
   data = data.frame(
-    cond = cond.index.values, cond.index.sq = cond.index.values^2), 
+    cond = cond.index.values), 
   indices = model.indices %>% as.numeric(),
   drop = T)[["estimates"]]
 
@@ -578,10 +579,9 @@ pred.model <- left_join(pred.model,
                         index.meta[,c("par.index", "ageclass", "Sex")], 
                         by = "par.index") %>%
   mutate(Group = paste0(Sex, ageclass))
-head(pred.model)
 
 p.cond <- 
-  ggplot(pred.model, aes(x = cond, y = estimate, group = Group)) +
+  ggplot(pred.model, aes(x = covdata, y = estimate, group = Group)) +
   geom_line(size = 1.5,aes(colour = Sex)) +
   geom_ribbon(aes(ymin = estimate - se,
                   ymax = estimate + se,
@@ -607,7 +607,7 @@ p.cond
 ```{r, message=FALSE, warning=FALSE}
 djfm.values = seq(from = min(ddl$S$djfm),
                   to = max(ddl$S$djfm),
-                  length.out = 100)
+                  length.out = 10)
 
 ## Extract get par.index of interest
 index.meta <- data.frame(
@@ -618,8 +618,6 @@ index.meta <- data.frame(
   mutate(dummy = paste0(djfm, ageclass)) 
 
 ## simplify, one par.index for each dummy var.
-## Predictions are identicalusing the full model but
-## cause memory problems.
 model.indices <- sapply(unique(index.meta$dummy), function(x) {
   ## return first row matching the query
   index.meta[index.meta$dummy == x,"par.index"][1]
@@ -631,15 +629,15 @@ index.meta <- index.meta[index.meta$par.index %in% model.indices,]
 pred.djfm <- covariate.predictions(
   supported.models, 
   data = data.frame(
-    djfm = djfm.values, bl.index.sq = djfm.values^2), 
+    djfm = djfm.values), 
   indices = index.meta$par.index)[["estimates"]]
 
 ## extend df with grouping variables
-pred.model <- left_join(pred.djfm,
-                        index.meta[,c("par.index", "ageclass")],
-                        by = "par.index") %>% 
+pred.model <- left_join(
+  pred.djfm,
+  index.meta[,c("par.index", "ageclass")],
+  by = "par.index") %>% 
   mutate(Group = ageclass)
-head(pred.model)
 
 pred.model <- left_join(
   index.meta,
@@ -649,7 +647,9 @@ pred.model <- left_join(
 p.djfm <- 
   ggplot(pred.model, aes(x = djfm, y = estimate, group = Group)) +
   geom_line(size = 1.5) +
-  geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.2) 
+  geom_ribbon(aes(ymin = estimate - se,
+                  ymax = estimate + se),
+              alpha = 0.2) +
   scale_colour_brewer(palette = "Set1") + 
   theme_classic() +
   theme(legend.position = 'none',
@@ -659,11 +659,9 @@ p.djfm <-
         aspect.ratio = 1) +
   xlab("DJFM NAO") +
   ylab("Survival probability [mean \U00B1 CI]") +
-  facet_wrap(~age)
+  facet_wrap(~ageclass)
 
 p.djfm
-ggsave("../../../../Dropbox/SurvivalPaper/figures/survival_winterNAO.tiff",
-       dpi = 144, width = 6, height = 6)
 ```
 
 ##### Leucocytozoon
@@ -727,11 +725,11 @@ ekto = 0:4
 
 ## Extract get par.index of interest
 index.meta <- data.frame(
-  age = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
   ## add par.index
-  left_join(., ddl$S[,c("par.index", "age")]) %>% 
+  left_join(., ddl$S[,c("par.index", "ageclass")]) %>% 
   ## code additional vars
-  mutate(dummy = paste0(age)) 
+  mutate(dummy = paste0(ageclass)) 
 
 ## simplify, one par.index for each dummy var
 model.indices <- sapply(unique(index.meta$dummy), function(x) {
@@ -745,25 +743,18 @@ index.meta <- index.meta[index.meta$par.index %in% model.indices,]
 pred.ekto <- covariate.predictions(
   supported.models, 
   data = data.frame(
-    Ekto = ekto, bl.index.sq = ekto^2), 
+    Ekto = ekto), 
   indices = index.meta$par.index)[["estimates"]]
 
 ## extend df with grouping variables
-pred.model <- left_join(pred.ekto, index.meta[,c("par.index", "age")], by = "par.index") %>% 
-  mutate(Group = age)
-head(pred.model)
+pred.model <- left_join(pred.ekto, index.meta[,c("par.index", "ageclass")], by = "par.index") %>% 
+  mutate(Group = ageclass)
 
-
-## Das sind nur die model outputs und 
-## die sequenz djfm.values ist nicht berücksichtigt
-## für die Kalkulation. Warum ?
-## Problem weil DJFM und Time confounded
-
-pred.model <- left_join(index.meta, pred.model[,c("par.index", "Ekto", "estimate", "lcl", "ucl", "age", "Group")]) %>% 
+pred.model <- left_join(index.meta, pred.model[,c("par.index", "covdata", "estimate", "lcl", "ucl", "ageclass", "Group")]) %>% 
   unique.data.frame()
 
 p.ekto <- 
-  ggplot(pred.model, aes(x = Ekto, y = estimate, group = age)) +
+  ggplot(pred.model, aes(x = covdata, y = estimate, group = ageclass)) +
   geom_errorbar(aes(ymin = lcl, ymax = ucl), width = .25, size = 1.5) +
   geom_point(size = 3, colour = "Black", shape = 15) +
   scale_colour_brewer(palette = "Set1") + 
@@ -774,16 +765,16 @@ p.ekto <-
     text = element_text(size = 12),
     legend.position = 'bottom',
     aspect.ratio = 1) +
-  xlab("Ektoparasite infection intensity") +
+  xlab("Ectoparasite infection intensity") +
   ylab("Survival probability [mean \U00B1 CI]") +
-  facet_wrap(~age)
+  facet_wrap(~ageclass)
 
 p.ekto
 ```
 
 #### Resighting probabilies
 
-All supported models contain a time dependent effect on resighting probabilties, with an average estimate of `r mean(mod.avg.p$estimate)` (range: `r min(mod.avg.p$estimate)` - `r max(mod.avg.p$estimate)`) .
+All supported models contain a time dependent effect on resighting probabilties, with an average estimate of `r mean(p.mod.avg$estimate)` (range: `r min(p.mod.avg$estimate)` - `r max(p.mod.avg$estimate)`) .
 
 ```{r, message=FALSE, warning=FALSE}
 ## compute means for sex and age combinations
@@ -797,50 +788,42 @@ comb <- list(
   list(time = 2010, age = 1, Age = "CY2"),
   list(time = 2010, age = 2, Age = "CY3"),
   list(time = 2010, age = 3:13, Age = "CY4+"),           
-  
   list(time = 2011, age = 1, Age = "CY2"),
   list(time = 2011, age = 2, Age = "CY3"),
   list(time = 2011, age = 3:13, Age = "CY4+"),           
- 
   list(time = 2012, age = 1, Age = "CY2"),
   list(time = 2012, age = 2, Age = "CY3"),
   list(time = 2012, age = 3:13, Age = "CY4+"),         
-  
   list(time = 2013, age = 1, Age = "CY2"),
   list(time = 2013, age = 2, Age = "CY3"),
   list(time = 2013, age = 3:13, Age = "CY4+"),         
-
   list(time = 2014, age = 1, Age = "CY2"),
   list(time = 2014, age = 2, Age = "CY3"),
   list(time = 2014, age = 3:13, Age = "CY4+"),         
-
   list(time = 2015, age = 1, Age = "CY2"),
   list(time = 2015, age = 2, Age = "CY3"),
   list(time = 2015, age = 3:13, Age = "CY4+"),         
-
   list(time = 2016, age = 1, Age = "CY2"),
   list(time = 2016, age = 2, Age = "CY3"),
   list(time = 2016, age = 3:13, Age = "CY4+"),         
-
   list(time = 2017, age = 1, Age = "CY2"),
   list(time = 2017, age = 2, Age = "CY3"),
   list(time = 2017, age = 3:13, Age = "CY4+"),         
-
   list(time = 2018, age = 1, Age = "CY2"),
   list(time = 2018, age = 2, Age = "CY3"),
   list(time = 2018, age = 3:13, Age = "CY4+"),         
-
   list(time = 2019, age = 1, Age = "CY2"),
   list(time = 2019, age = 2, Age = "CY3"),
   list(time = 2019, age = 3:13, Age = "CY4+"),         
-
   list(time = 2020, age = 1, Age = "CY2"),
   list(time = 2020, age = 2, Age = "CY3"),
-  list(time = 2020, age = 3:13, Age = "CY4+")         
+  list(time = 2020, age = 3:13, Age = "CY4+")     
 )
 p.effect <- 
 lapply(1:length(comb), function(x) {
-  dx <- filter(p.mod.avg, time == comb[[x]]$time, age %in% comb[[x]]$age)
+  dx <- filter(p.mod.avg,
+               time == comb[[x]]$time,
+               age %in% comb[[x]]$age)
   data.frame(estimate = mean(dx$estimate),
              lcl = mean(dx$lcl), 
              ucl = mean(dx$ucl),
@@ -877,19 +860,22 @@ p.res
 
 #### Recovery probabilites
 
-```{r}
+```{r, eval=F}
 mod.avg.r <- 
 lapply(1:length(comb), function(x) {
-  dx <- filter(r.mod.avg, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
+  dx <- filter(r.mod.avg,
+               #Sex == comb[[x]]$Sex,
+               age %in% comb[[x]]$age)
   data.frame(estimate = mean(dx$estimate),
              lcl = mean(dx$lcl), 
              ucl = mean(dx$ucl), 
              se = mean(dx$se),
-             Sex = comb[[x]]$Sex,
-             Age = comb[[x]]$ageclass)
+             #Sex = comb[[x]]$Sex,
+             Age = comb[[x]]$Age)
 }) %>% 
-  do.call("rbind",.) %>% 
-  mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
+  do.call("rbind",.) 
+# %>% 
+#   mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
  
 p.recov <- ggplot(mod.avg.r, aes(x = x, y = estimate, col = Sex)) +
   theme_classic() +
@@ -914,8 +900,6 @@ p.recov
 
 
 #### Fidelity (F)
-
-For a reason that still needs exploration, it is not possible to compute estimates for site fidelity of second and third year individuals, but for CY1 and CY4plus it is.
 
 ```{r, message=FALSE, warning=FALSE}
 df.F <- 
