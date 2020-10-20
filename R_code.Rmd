@@ -24,7 +24,7 @@ library(forestmodel)
 ## Load raw data 
 ### NAO indices
 
-Here, we use NAO indices that are based on the principal component approach [^8] (Hurrel, 2003).
+Here, we use NAO indices that are based on the principal component approach [^8].
 
 ```{r}
 nao <- read.table("data/nao.txt", header = T) %>% 
@@ -39,6 +39,13 @@ There are two datasets, `ringing_data` containing morphometric measures of all i
 ```{r, message=FALSE}
 ringing_data <- as.data.frame(read_csv("data/ringing_data.csv")) 
 resighting_data <- as.data.frame(read_csv("data/resighting_data.csv"))
+```
+
+```{r}
+## age distribution
+hist(ringing_data$Age_days)
+quantile(ringing_data$Age_days, c(0.025, 0.975))
+mean(ringing_data$Age_days)
 ```
 
 # Statistical Analysis
@@ -127,7 +134,14 @@ df <- data.frame(
                   resights = resighting_data)) %>% 
   mutate(ch = as.character(ch)) %>% 
   mutate(Sex = as.factor(Sex)) %>% 
-  mutate(Hatch = scale(Hatch)) 
+  mutate(Hatch = scale(Hatch)) %>% 
+  mutate(Morh = case_when(
+    Morph == "2" ~ "Dark",
+    Morph == "3" ~ "Intermediate",
+    Morph == "4" ~ "Light"
+  )) %>% 
+  subset(., 
+         select = -c(Ring, Rank, Hatch, Lbinom, Dead, DateDeath, CauseDeath))
 
 ## process the data for RMark
 dp  <-  process.data(df, model = "Burnham",
@@ -146,6 +160,10 @@ ddl$S <- ddl$S %>%
              age == 1 ~ "CY2",
              age == 2 ~ "CY3",
              age >= 3 ~ "CY4plus"
+           )) %>% 
+  mutate(ageclass2 = case_when(
+             age == 0 ~ "CY1",
+             age >= 1 ~ "CY2plus"
            ))
 
 ## collect variables which are year but not individual specific
@@ -163,6 +181,10 @@ ddl$F <- ddl$F %>%
              age == 1 ~ "CY2",
              age == 2 ~ "CY3",
              age >= 3 ~ "CY4plus"
+           )) %>% 
+  mutate(ageclass2 = case_when(
+             age == 0 ~ "CY1",
+             age >= 1 ~ "CY2plus"
            ))
 
 ## recovery chances
@@ -174,6 +196,10 @@ ddl$r <- ddl$r %>%
              age == 1 ~ "CY2",
              age == 2 ~ "CY3",
              age >= 3 ~ "CY4plus"
+           )) %>% 
+  mutate(ageclass2 = case_when(
+             age == 0 ~ "CY1",
+             age >= 1 ~ "CY2plus"
            ))
 
 ## resight probability
@@ -185,6 +211,10 @@ ddl$p <- ddl$p %>%
              age == 1 ~ "CY2",
              age == 2 ~ "CY3",
              age >= 3 ~ "CY4plus"
+           )) %>% 
+  mutate(ageclass2 = case_when(
+             age == 0 ~ "CY1",
+             age >= 1 ~ "CY2plus"
            ))
 ## Goodness of fit using RELEASE
 release.gof(dp)
@@ -192,6 +222,7 @@ rm(covars); rm(nao);
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
+## summary of the dataset for table in the manuscript
 dat <- sapply(df$ch, stringr::str_split, "", simplify = T) %>% 
   do.call("rbind",.) %>% 
    apply(.,2,as.numeric) %>% 
@@ -241,7 +272,7 @@ write.csv(output, file = "data/sample.sizes.csv")
 knitr::kable(output)
 ```
 
-```{r,eval=F}
+```{r,eval=F, echo=FALSE}
 resights <- sapply(df.A$ch, stringr::str_split, "", simplify = T) %>% 
   do.call("rbind",.) %>% 
   apply(.,2,as.numeric) %>%
@@ -298,7 +329,6 @@ cat("Ind Resighted:", length(res.ind[res.ind > 0]))
 cat("Prop Resighted:", length(res.ind[res.ind > 0])/length(res.ind))
 cat("Avg #:", mean(res.ind[res.ind > 0]))
 cat("Avg #:", sd(res.ind[res.ind > 0]))
-
 ```
 
 ### Bootstrapping Global model
@@ -306,6 +336,7 @@ cat("Avg #:", sd(res.ind[res.ind > 0]))
 The code below is used to implement a parametric bootstrapping to calculate median $\hat{C}$ based in function defined in the script `R/bootstrapping_functions.R`
 
 ```{r, eval = F, message=FALSE, warning=FALSE}
+## not run, output is saved
 source("R/bootstrapping.R")
 ## run global model to get parameter estimates
 global.model <- mark(dp, ddl, silent = T, output = F,
@@ -374,79 +405,260 @@ cleanup(ask = F)
 
 ### Candidate models
 
-The code below implements all candidate models. As the execution is computationally extensive the code is not executed by default but the output is saved as part of this repository.  
+The code below implements all candidate models. As the execution is computationally extensive the code is not executed by default but the output is provided within this repository.  
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
-do_analysis = function(dp, ddl) {
+## not run, output is saved 
+## clear working space
+#rm(list = c("ringing_data", "resighting_data", "df"))
+
+do_analysis = function(dp, ddl, merge = F, suffix = NULL) {
   
-  S.dot = list(formula = ~ 1)
-  S.0 = list(formula = ~ ageclass + Sex)
-  S.cond = list(formula = ~ ageclass*cond + Sex)
-  S.condxdjfm = list(formula = ~ ageclass*cond + ageclass*djfm + Sex)
-  S.condxdjfmxhatch = list(formula = ~ ageclass*cond + ageclass*djfm + ageclass*Hatch + Sex)
-  S.djfm = list(formula = ~ ageclass*djfm + Sex)
-  S.djfmxhatch = list(formula = ~ ageclass*djfm + ageclass*Hatch + Sex)
+  ## AGE4
+  ## ###########################################################################
+  S.2 = list(formula = ~ ageclass + Sex)
+  S.2x = list(formula = ~ ageclass)
   
-  S.A = list(formula = ~ 
-               ageclass * cond + ageclass * djfm + Sex + Morph + ageclass*Lprev + ageclass * Ekto)
+  S.3 = list(formula = ~ ageclass * cond + Sex)
+  S.3x = list(formula = ~ ageclass * cond)
+
+  S.4 = list(formula = ~ ageclass * cond + ageclass * djfm + Sex)
+  S.4x = list(formula = ~ ageclass * cond + ageclass * djfm)
   
-  S.B = list(formula = ~ 
-               ageclass * cond + ageclass * djfm + Sex + Morph + ageclass*Lprev + ageclass * Ekto + ageclass * ageclass * Hatch + ageclass * Rank)
+  # S.5 = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Hatch + Sex)
+  # S.5x = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Hatch)
+
+  S.9 = list(formula = ~ ageclass * cond + ageclass * Ekto + ageclass * Lprev + Sex + Morph)
+  S.9x = list(formula = ~ ageclass * cond + ageclass * Ekto + ageclass * Lprev + Morph)
   
-  S.C = list(formula = ~ 
-               ageclass * cond + ageclass * djfm + Sex + Morph + ageclass*Lprev + ageclass * Ekto + ageclass * ageclass * Hatch + ageclass * Rank * Brood_Size)
+  S.5 = list(formula = ~ ageclass * cond + ageclass * Ekto + ageclass * Lprev + Sex )
+  S.5x = list(formula = ~ ageclass * cond + ageclass * Ekto + ageclass * Lprev)
   
+  S.11 = list(formula = ~ageclass * cond + ageclass * djfm + ageclass * Ekto + Morph + Sex)
+  S.11x = list(formula = ~ageclass * cond + ageclass * djfm + ageclass * Ekto + Morph)
   
-  S.D = list(formula = ~ 
-               ageclass * cond + ageclass * djfm + ageclass*Lprev)
+  S.8 = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Lprev + Morph + Sex)
+  S.8x = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Lprev + Morph)
   
+  S.13 = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Lprev + Sex)
+  S.13x = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Lprev)
   
-  S.E = list(formula = ~ 
-               ageclass * cond + djfm + ageclass*Lprev)
+  S.12 = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Ekto + Sex)
+  S.12x = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Ekto)
   
+  S.15 = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Lprev + Sex)
+  S.15x = list(formula = ~ ageclass * cond + ageclass * djfm + ageclass * Lprev)
+
+  # S.13 = list(formula = ~ageclass * cond + ageclass * Ekto + ageclass * Hatch + ageclass * Lprev + Morph + Sex)
+  # S.13x = list(formula = ~ageclass * cond + ageclass * Ekto + ageclass * Hatch + ageclass * Lprev + Morph)
   
-  p.time = list(formula = ~ time + ageclass)
-  p.dot = list(formula = ~ 1)
-  F.age = list(formula = ~ Sex + ageclass)
-  F.age2 = list(formula = ~ Sex * ageclass)
+  # S.15 = list(formula = ~ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Hatch + Morph + Sex)
+  # S.15x = list(formula = ~ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Hatch + Morph)
+  # 
+  # S.12 = list(formula = ~ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Hatch + ageclass * Lprev + Morph + Sex)
+  # S.12x = list(formula = ~ageclass * cond + ageclass * djfm + ageclass * Ekto + ageclass * Hatch + ageclass * Lprev + Morph)
+  
+  S.3b = list(formula = ~ ageclass + cond + Sex)
+  S.3bz = list(formula = ~ ageclass + cond)
+  
+  S.4b = list(formula = ~ ageclass + cond + djfm + Sex)
+  S.4bz = list(formula = ~ ageclass + cond + djfm)
+  
+  # S.5b = list(formula = ~ ageclass + cond + djfm + Hatch + Sex)
+  # S.5bz = list(formula = ~ ageclass + cond + djfm + Hatch)
+  
+  S.9b = list(formula = ~ ageclass + cond + Ekto + Lprev + Morph + Sex)
+  S.9bz = list(formula = ~ ageclass + cond + Ekto + Lprev + Morph)
+  
+  S.5b = list(formula = ~ ageclass + cond + Ekto + Lprev + Sex)
+  S.5bz = list(formula = ~ ageclass + cond + Ekto + Lprev)
+  
+  S.11b = list(formula = ~ageclass + cond + djfm  + Ekto  + Morph + Sex)
+  S.11bz = list(formula = ~ageclass + cond + djfm  + Ekto  + Morph)
+  
+  S.13b = list(formula = ~ageclass + cond + djfm  + Ekto + Sex)
+  S.13bz = list(formula = ~ageclass + cond + djfm  + Ekto)
+  
+  S.8b = list(formula = ~ ageclass + cond + djfm + Ekto + Lprev + Morph + Sex)
+  S.8bz = list(formula = ~ ageclass + cond + djfm + Ekto + Lprev + Morph)
+  
+  # S.13b = list(formula = ~ageclass + cond + Ekto + Hatch + Lprev + Morph + Sex)
+  # S.13bz = list(formula = ~ageclass + cond + Ekto + Hatch + Lprev + Morph)
+  
+  # S.15b = list(formula = ~ageclass + cond + djfm + Ekto + Hatch + Morph + Sex)
+  # S.15bz = list(formula = ~ageclass + cond + djfm + Ekto + Hatch + Morph)
+  
+  S.6 = list(formula = ~ ageclass * djfm + Sex)
+  S.6x = list(formula = ~ ageclass * djfm)
+  
+  # S.7 = list(formula = ~ ageclass * djfm + ageclass * Hatch + Sex)
+  # S.7x = list(formula = ~ ageclass * djfm + ageclass * Hatch)
+  
+  S.10 = list(formula = ~ageclass * djfm + ageclass * Ekto + ageclass * Lprev +  Morph + Sex)
+  S.10x = list(formula = ~ageclass * djfm + ageclass * Ekto + ageclass * Lprev +  Morph)
+  
+  # S.14 = list(formula = ~ageclass * djfm + ageclass * Ekto + ageclass * Hatch + ageclass * Lprev + Morph + Sex)
+  # S.14x = list(formula = ~ageclass * djfm + ageclass * Ekto + ageclass * Hatch + ageclass * Lprev + Morph)
+  
+  S.6b = list(formula = ~ ageclass + djfm + Sex)
+  S.6bz = list(formula = ~ ageclass + djfm)
+  
+  # S.7b = list(formula = ~ ageclass + djfm + Hatch + Sex)
+  # S.7bz = list(formula = ~ ageclass + djfm + Hatch)
+  
+  S.10b = list(formula = ~ageclass + djfm + Ekto + Lprev + Morph + Sex)
+  S.10bz = list(formula = ~ageclass + djfm + Ekto + Lprev + Morph)
+  
+  S.14b = list(formula = ~ageclass + djfm + Ekto + Lprev + Sex)
+  S.14bz = list(formula = ~ageclass + djfm + Ekto + Lprev)
+  
+  # S.14b = list(formula = ~ageclass + djfm + Ekto + Hatch + Lprev + Morph + Sex)
+  # S.14bz = list(formula = ~ageclass + djfm + Ekto + Hatch + Lprev + Morph)
+  
+  #p.dot = list(formula = ~ 1)
+  p.age = list(formula = ~ ageclass)
+  #p.age2 = list(formula = ~ ageclass2)
+  p.time = list(formula = ~ time)
+  p.time.age = list(formula = ~ time + ageclass)
+  #p.time.age2 = list(formula = ~ time + ageclass2)
+
   F.dot = list(formula = ~ 1)
-  F.sex = list(formuula = ~ Sex)
-  r.age = list(formula = ~ ageclass)
-  r.dot = list(formula = ~ 1)
+  F.age = list(formula = ~ ageclass)
+  F.age.sex = list(formula = ~ ageclass + Sex)
+  #F.age2 = list(formula = ~ ageclass2)
+  #F.age2.sex = list(formula = ~ ageclass2 + Sex)
+  F.Sex = list(formula = ~ Sex)
+  
+  #r.dot = list(formula = ~ 1)
+  #r.age = list(formula = ~ ageclass)
+  r.age2 = list(formula = ~ ageclass2)
   
   cml = create.model.list(model = "Burnham")
+  save(cml, file = "data/cml.temp.RData")
+  
+  # only run new models 
+  if (isTRUE(merge) & !is.null(suffix)) {
+  load(paste0("cml.", suffix, ".RData"))  
+    cml <- anti_join(cml, cml.old)
+  }
+  
+  ## split task 
+  split <- c(round(seq(0, nrow(cml), length.out = 10)))
+
+  for (i in 1:(length(split)-1)) {
   # run all models and return as a list with class 'marklist'
-  results = mark.wrapper(cml, data = dp, ddl = ddl, output = F, silent = T)
-  return(results)
+   pb <- utils::txtProgressBar(min = 1, max = length(split) -1,
+                               style = 3, char = "+", width = 80)
+   utils::setTxtProgressBar(pb, i)
+
+   results = mark.wrapper.parallel(cml[(split[i] + 1):split[i + 1],],
+                                   data = dp,
+                                   ddl = ddl,
+                                   output = F,
+                                   silent = T,
+                                   cpus = 4)
+   save(results, file = paste0("data/results", i, ".RData"))
+   rm(results)
+  }
+  
+  ## merge results
+  indices <- data.frame(first = split[1:9] + 1,
+            last = split[2:10],
+            n = diff(split)
+  )
+  
+  cat("Merge results ... \n")
+  cat("1 out of 10 \n")
+  load("data/results1.RData"); results1 <- results; rm(results)
+  
+  cat("2 out of 10 \n")
+  load("data/results2.RData"); results2 <- results; rm(results)
+  names(results2)[1:indices$n[2]] <-  paste0("model", indices$first[2]:indices$last[2])
+  results.comb <- merge.mark(results1, results2); rm(results1); rm(results2)
+  
+  cat("3 out of 10\n")
+  load("data/results3.RData")
+  names(results)[1:indices$n[3]] <-  paste0("model", indices$first[3]:indices$last[3])
+  results.comb <- merge.mark(results.comb, results); rm(results)
+  
+  cat("4 out of 10\n")
+  load("data/results4.RData")
+  names(results)[1:indices$n[4]] <-  paste0("model", indices$first[4]:indices$last[4])
+  results.comb <- merge.mark(results.comb, results); rm(results)
+  
+  cat("5 out of 10\n")
+  load("data/results5.RData")
+  names(results)[1:indices$n[5]] <-  paste0("model", indices$first[5]:indices$last[5])
+  results.comb <- merge.mark(results.comb, results); rm(results)
+  
+  cat("6 out of 10\n")
+  load("data/results6.RData")
+  names(results)[1:indices$n[6]] <-  paste0("model", indices$first[6]:indices$last[6])
+  results.comb <- merge.mark(results.comb, results); rm(results)
+  
+  cat("7 out of 10\n")
+  load("data/results7.RData")
+  names(results)[1:indices$n[7]] <-  paste0("model", indices$first[7]:indices$last[7])
+  results.comb <- merge.mark(results.comb, results); rm(results)
+  
+  cat("8 out of 10\n")
+  load("data/results8.RData")
+  names(results)[1:indices$n[8]] <-  paste0("model", indices$first[8]:indices$last[8])
+  results.comb <- merge.mark(results.comb, results); rm(results)
+  
+  cat("9 out of 10\n")
+  load("data/results9.RData")
+  names(results)[1:indices$n[9]] <-  paste0("model", indices$first[9]:indices$last[9])
+  results.comb <- merge.mark(results.comb, results); rm(results)
+  
+  return(results.comb)
 }
-models <- do_analysis(dp = dp, ddl = ddl)
+
+# if (!is.null(suffix)) {
+# load(paste0("data/models.", suffix, ".RData"))
+# assign(paste0("models.old"), models)
+# }
+models <- do_analysis(dp = dp, ddl = ddl, merge = F, suffix = NULL)
+
+## only temp
+#rm(ddl); rm(dp)
+
+# if (!is.null(suffix)) {
+# models <- merge.mark(models, models.old)
+# }
+
+## find duplicated models
+# mt <- model.table(models, sort = F)
+# to.remove <- which(duplicated(mt$model))
+# ## remove 
+# models <- remove.mark(
+#   marklist = models,
+#   model.numbers = to.remove)
 
 ## adjust for overdispersion using c-hat
 load("data/c.hat.RData")
 models.adj <-  adjust.chat(model.list = models, chat = c.hat) 
-model.tab <- model.table(models.adj, use.lnl = TRUE) %>% 
-  mutate(weight = round(weight, 2)) %>% 
-  mutate(DeltaQAICc = round(DeltaQAICc, 2)) %>% 
-  mutate(Neg2LnL = round(Neg2LnL, 2)) 
 
-# models within 7 DeltaQAICc units of the best are considered to have
-## statistical support
+## Select supported models
 supported.models <- remove.mark(
   marklist = models.adj,
-  model.numbers = which(model.table(models.adj, sort = F)[["DeltaQAICc"]] > 7))
+  model.numbers = which(model.table(models.adj, sort = F)[["DeltaQAICc"]] > 10))
 
 suffix <- Sys.time() %>% 
   as.character() %>% 
   stringr::str_remove(., " ") %>% 
   gsub(pattern = ":", replacement = "-", x = .)
 
-print(model.tab[,c("model", "npar", "DeltaQAICc", "Neg2LnL", "weight")])
-write.csv(model.tab, "data/model_output.csv", row.names = F)
+## save cml object
+load("data/cml.temp.RData")
+assign(paste0("cml.old"), cml)
+save(cml.old, file = paste0("cml.", suffix, ".RData"))
 
 save(suffix, file = paste0("data/",suffix,".RData"))
 save(models, file = paste0("data/models.", suffix, ".RData"))
 save(models.adj, file = paste0("data/models.adj.", suffix, ".RData"))
 save(supported.models, file = paste0("data/supported.models.", suffix, ".RData"))
+cleanup(ask = F)
 ```
 
 ### Results
@@ -455,96 +667,198 @@ As the execution of the models is time consuming, we provide the captured output
 
 ```{r}
 ## load previously saved results
-#suffix <- '2020-10-0522-27-47'
-suffix <- '2020-10-0820-59-18'
-
-load(paste0("data/models.", suffix, ".RData"))
+suffix <- "2020-10-1901-29-29"
+## all models
+#load(paste0("data/models.", suffix, ".RData"))
+## models with adjusted deviance
 load(paste0("data/models.adj.", suffix, ".RData"))
+## models within DeltaQAICc <= 10 of the top ranking
 load(paste0("data/supported.models.", suffix, ".RData"))
 ```
+
+In total we evaluated `r models.adj$model.table$model %>% unique() %>% length()`models, of which `r supported.models$model.table %>% unique.data.frame %>% nrow()` where supported to a variable extend by the data (i.e. within $\Delta QAIC_c <= 10$ of the top model)
+
+```{r, eval=FALSE}
+model.table <-supported.models$model.table[,c("model", "DeltaQAICc", "weight", "npar", "QDeviance")]
+readr::write_csv(model.table, "data/supported.models.csv")
+
+model.table <-models.adj$model.table[,c("model", "DeltaQAICc", "weight", "npar", "QDeviance")] 
+readr::write_csv(model.table, "data/adjusted.models.csv")
+```
+```{r, echo=FALSE}
+## saving memory
+rm(models.adj)
+```
+
 
 #### Model averaging
 
 ```{r, message=FALSE, warning=FALSE}
 ## Model average Survival estimates (S) 
-S.mod.avg <- model.average(supported.models, parameter = "S", drop = T, vcv = T)[["estimates"]] %>% 
+S.mod.avg <- model.average(
+  remove.mark(
+    marklist = supported.models,
+    model.numbers = which(model.table(supported.models, sort = F)[["DeltaQAICc"]] > 7)),
+  parameter = "S", drop = T, vcv = T)[["estimates"]] %>% 
   subset(., select = c(estimate, se, lcl, ucl, age, Sex))
 
 ## Model average Fidelity estimates (F)
-F.mod.avg <- model.average(models.adj, parameter = "F", vcv = T, drop = T)$estimates %>% 
+F.mod.avg <- model.average(supported.models, parameter = "F", vcv = T, drop = T)$estimates %>% 
   subset(., select = (c(estimate, se, lcl, ucl, time, age, Sex))) %>% 
   unique.data.frame() 
 
 ## Model average recovery estimates (r)
-r.mod.avg <- model.average(models.adj, parameter = "r", vcv = T, drop = T)$estimates %>% 
+r.mod.avg <- model.average(supported.models, parameter = "r", vcv = T, drop = T)$estimates %>% 
   subset(., select = (c(estimate, se, lcl, ucl, time, age, Sex))) %>% 
   unique.data.frame() 
 
 ## Model average resighting estimates (p)
-p.mod.avg <- model.average(models.adj, parameter = "p", vcv = T, drop = T)$estimates %>% 
+p.mod.avg <- model.average(supported.models, parameter = "p", vcv = T, drop = T)$estimates %>% 
   subset(., select = (c(estimate, se, lcl, ucl, time, age))) %>% 
   unique.data.frame() 
 ```
 
 #### Survival probabilites
 
+Mean estimates for age and sex combinations over time
+
+```{r}
+estimates <- S.mod.avg %>% 
+  mutate(AgeGroup = case_when(
+    age == 0 ~ "CY1",
+    age == 1 ~ "CY2",
+    age == 2 ~ "CY3",
+    age %in% 3:13 ~ "CY4+"
+  ))
+
+(DBChecks::summary_stats(estimates,
+                        measurevar = "estimate",
+                        groupvars = c("Sex", "AgeGroup")))
+```
+
 ##### Age
 
 ```{r, message=FALSE, warning=FALSE}
-## Compute means for sex by age combinations
-comb <- list(list(Sex = "Male", age = 0, ageclass = "CY1"), 
-             list(Sex = "Male", age = 1, ageclass = "CY2"),
-             list(Sex = "Male", age = 2, ageclass = "CY3"),
-             list(Sex = "Male", age = 3:13, ageclass = "CY4plus"),
-             list(Sex = "Female", age = 0, ageclass = "CY1"), 
-             list(Sex = "Female", age = 1, ageclass = "CY2"),
-             list(Sex = "Female", age = 2, ageclass = "CY3"),
-             list(Sex = "Female", age = 3:13, ageclass = "CY4plus")
-             )
-df.S.age <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(S.mod.avg, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl),
-             se = mean(dx$se),
-             Sex = comb[[x]]$Sex,
-             Age = comb[[x]]$ageclass)
+## derive ageclass-specfic annual survival estimates
+df.S.age <- lapply(rownames(S.mod.avg), function(row) {
+  x <- stringr::str_split(row, " ")[[1]]
+  data.frame(parameter = x[1],
+             cohort = substr(x[3], 2, nchar(x[3])),
+             year = as.numeric(substr(x[5], 2, nchar(x[5]))))
 }) %>% 
   do.call("rbind",.) %>% 
-  mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
+  cbind(S.mod.avg) %>% 
+  mutate(ageclass = case_when(
+    age == 0 ~ 'CY1',
+    age == 1 ~ 'CY2',
+    age == 2 ~ 'CY3',
+    age %in% 3:13 ~ 'CY4plus' ## 3:13 are identical 
+  )) 
 
 p.age <- 
-  ggplot(df.S.age, aes(x = x, y = estimate, col = Sex, fill = Sex)) +
-  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1) +
-  geom_point(size = 3, shape = 15) +
+  ggplot(filter(df.S.age, age %in% 0:3), aes(x = year, y = estimate, group = age)) +
+  geom_line(lty = "dotted", aes(col = age)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate +se,  color = age), width = 0, size = 1) +
+  geom_point(aes(col = age, shape = age), size = 2) +
   theme_classic() +
   theme(
-    panel.border = element_rect(fill = NA),
-    panel.background = element_rect(fill = "Grey95"),
-    text = element_text(size = 12),
-    legend.position = c(.2, .05),
-    legend.title = element_blank(),
+    axis.line = element_line(size = .7, color = "black"),
+    # axis.text.x = element_blank(),
+    # axis.title.x = element_blank(),
+    # axis.ticks.x = element_blank(),
+    legend.background = element_rect(fill = NA, colour = "Black"),
+    legend.margin = margin(c(1,1,1,1)),
     legend.direction = "horizontal",
-    legend.background = element_rect(fill = NA),
-    aspect.ratio = 1) +
-  scale_colour_brewer(palette = "Set1", direction = -1) +
-  scale_x_continuous(breaks = 1:4, labels = unique(df.S.age$Age)) +
-  scale_y_continuous(expand = c(0,0), 
-                     limits = c(0,1),
+    legend.position = c(0.75, 0.06),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA),
+    text = element_text(size = 10)) +
+  scale_color_brewer(palette = "PuOr", 
+                     labels = c("CY1", "CY2", "CY3", "CY4+"),
+                     name = "") +
+  scale_shape_manual(values = c(1, 2, 5, 9),
+                     labels = c("CY1", "CY2", "CY3", "CY4+"),
+                     name = "") +
+  scale_y_continuous(limits = c(0.1, 1),
                      breaks = seq(0, 1, .2)) +
-  xlab("Age class") +
-  ylab("Suvival probability [Mean \U00B1 SE]") 
-
+  scale_x_continuous(breaks = seq(2007, 2020, 1),
+                     limits = c(2007, 2020)) +
+  xlab("Year") +
+  ylab("Suvival probability \U03D5 [mean \U00B1 SE]") + 
+  facet_wrap(~Sex, ncol = 1, strip.position = "top")
 p.age
+ggsave("plots/Fig_1_AgeEffect.tiff", device = "tiff", dpi = 300, width = 6, height = 4, units = "in")
 ```
 
+##### NAO
+
+```{r, message=FALSE, warning=FALSE}
+djfm.values = ddl$S$djfm %>% unique()
+
+## Extract get par.index of interest
+index.meta <- data.frame(
+  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
+  ## add par.index
+  left_join(., ddl$S[,c("par.index", "ageclass", "djfm")]) %>% 
+  ## code additional vars
+  mutate(dummy = paste0(djfm, ageclass)) 
+
+## simplify, one par.index for each dummy var.
+model.indices <- sapply(unique(index.meta$dummy), function(x) {
+  ## return first row matching the query
+  index.meta[index.meta$dummy == x,"par.index"][1]
+}) %>%
+  unlist()
+
+index.meta <- index.meta[index.meta$par.index %in% model.indices,]
+
+pred.djfm <- covariate.predictions(
+  model = supported.models, 
+  data = data.frame(
+    djfm = djfm.values), 
+  indices = index.meta$par.index)[["estimates"]]
+
+## extend df with grouping variables
+pred.model <- left_join(
+  pred.djfm,
+  index.meta[,c("par.index", "ageclass")],
+  by = "par.index") %>% 
+  mutate(Group = ageclass)
+
+pred.model <- left_join(
+  index.meta,
+  pred.model[,c("par.index", "estimate", "lcl", "ucl", "se", "ageclass", "Group")]) %>% 
+  unique.data.frame()
+
+
+p.djfm <- 
+  ggplot(pred.model, aes(x = djfm, y = estimate, group = Group)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = lcl,
+                  ymax = ucl),
+              alpha = 0.2) +
+  
+  theme_classic() +
+  theme(
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA),
+    text = element_text(size = 10)) +
+  scale_y_continuous(limits = c(0,1),
+                     breaks = seq(0, 1, 0.2)) +
+  xlab("NAO index (DJFM)") +
+  ylab("Survival probability \U03D5") +
+  facet_wrap(~ageclass, ncol = 1,
+             strip.position = "right") 
+p.djfm
+ggsave("plots/Fig_2_NAOEffect.tiff", device = "tiff", dpi = 300, width = 4, height = 6, units = "in")
+```
 
 ##### Condition
 
 ```{r message=FALSE, warning=FALSE}
 # create values of cond.index to use for predictions
-cond.index.values = seq(from = -2, to = 2, length.out = 100)
+cond.index.values = seq(from = min(df$cond), to = max(df$cond), length.out = 10)
 
 ## Extract get 'par.index' of interest
 index.meta <- data.frame(
@@ -580,88 +894,29 @@ pred.model <- left_join(pred.model,
                         by = "par.index") %>%
   mutate(Group = paste0(Sex, ageclass))
 
+## only showing estimates for females,  as sex-difference is small and additive, 
+## whereby only the intercept but not the response varies
 p.cond <- 
-  ggplot(pred.model, aes(x = covdata, y = estimate, group = Group)) +
-  geom_line(size = 1.5,aes(colour = Sex)) +
-  geom_ribbon(aes(ymin = estimate - se,
-                  ymax = estimate + se,
-                  colour = Sex), alpha = 0.2) +
-  scale_colour_brewer(palette = "Set1") + 
+  ggplot(filter(pred.model, Sex ==  "Female"), aes(x = covdata, y = estimate, group = Group)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = lcl,
+                  ymax = ucl),
+              alpha = 0.2) +
+  
   theme_classic() +
   theme(
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
     panel.border = element_rect(fill = NA),
-    panel.background = element_rect(fill = "Grey95"),
-    text = element_text(size = 12),
-    legend.position = 'none',
-    aspect.ratio = 1) +
-  xlab("Standardised Body condition") +
-  ylab("Survival probability [mean \U00B1 SE]") +
-  scale_y_continuous(expand = c(0,0), limits = c(0,1),
-                     breaks = seq(0, 1, 0.2)) +
-  facet_wrap(~ageclass)
+    text = element_text(size = 10)) +
+  xlab("Standardised Body condition index") +
+  ylab("Survival probability \U03D5") +
+  facet_wrap(~ageclass, ncol = 1,
+             strip.position = "right") + 
+  scale_y_continuous(limits = c(0,1),
+                     breaks = seq(0, 1, 0.2)) 
 p.cond
-```
-
-##### NAO
-
-```{r, message=FALSE, warning=FALSE}
-djfm.values = seq(from = min(ddl$S$djfm),
-                  to = max(ddl$S$djfm),
-                  length.out = 10)
-
-## Extract get par.index of interest
-index.meta <- data.frame(
-  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
-  ## add par.index
-  left_join(., ddl$S[,c("par.index", "ageclass", "djfm")]) %>% 
-  ## code additional vars
-  mutate(dummy = paste0(djfm, ageclass)) 
-
-## simplify, one par.index for each dummy var.
-model.indices <- sapply(unique(index.meta$dummy), function(x) {
-  ## return first row matching the query
-  index.meta[index.meta$dummy == x,"par.index"][1]
-}) %>%
-  unlist()
-
-index.meta <- index.meta[index.meta$par.index %in% model.indices,]
-
-pred.djfm <- covariate.predictions(
-  supported.models, 
-  data = data.frame(
-    djfm = djfm.values), 
-  indices = index.meta$par.index)[["estimates"]]
-
-## extend df with grouping variables
-pred.model <- left_join(
-  pred.djfm,
-  index.meta[,c("par.index", "ageclass")],
-  by = "par.index") %>% 
-  mutate(Group = ageclass)
-
-pred.model <- left_join(
-  index.meta,
-  pred.model[,c("par.index", "estimate", "lcl", "ucl", "se", "ageclass", "Group")]) %>% 
-  unique.data.frame()
-
-p.djfm <- 
-  ggplot(pred.model, aes(x = djfm, y = estimate, group = Group)) +
-  geom_line(size = 1.5) +
-  geom_ribbon(aes(ymin = estimate - se,
-                  ymax = estimate + se),
-              alpha = 0.2) +
-  scale_colour_brewer(palette = "Set1") + 
-  theme_classic() +
-  theme(legend.position = 'none',
-        panel.border = element_rect(fill = NA),
-        panel.background = element_rect(fill = "Grey95"),
-        text = element_text(size = 12),
-        aspect.ratio = 1) +
-  xlab("DJFM NAO") +
-  ylab("Survival probability [mean \U00B1 CI]") +
-  facet_wrap(~ageclass)
-
-p.djfm
+ggsave("plots/Fig_3_BCI_Effect.tiff", device = "tiff", dpi = 300, width = 4, height = 6, units = "in")
 ```
 
 ##### Leucocytozoon
@@ -689,33 +944,34 @@ index.meta <- index.meta[index.meta$par.index %in% model.indices,]
 pred.leuco <- covariate.predictions(
   supported.models, 
   data = data.frame(
-    Lprev = leuco, bl.index.sq = leuco^2), 
+    Lprev = leuco), 
   indices = index.meta$par.index)[["estimates"]]
 
 ## extend df with grouping variables
 pred.model <- left_join(pred.leuco, index.meta[,c("par.index", "ageclass")], by = "par.index") %>% 
   mutate(Group = ageclass)
 
-pred.model <- left_join(index.meta, pred.model[,c("par.index", "Lprev", "estimate", "lcl", "ucl", "se", "ageclass", "Group")]) %>% 
+pred.model <- left_join(index.meta, pred.model[,c("par.index", "covdata", "estimate", "lcl", "ucl", "se", "ageclass", "Group")]) %>% 
   unique.data.frame()
 
 p.leuco <- 
-  ggplot(pred.model, aes(x = Lprev, y = estimate, group = ageclass)) +
-  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
-  geom_point(size = 3, colour = "Black", shape = 15) +
-  scale_colour_brewer(palette = "Set1") + 
+  ggplot(pred.model, aes(x = covdata, y = estimate, group = ageclass)) +
+  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = 0, size = 0.75) +
+  geom_point(size = 3, colour = "Black", shape = 20) +
   theme_classic() +
   theme(
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
     panel.border = element_rect(fill = NA),
-    panel.background = element_rect(fill = "Grey95"),
-    text = element_text(size = 12),
-    legend.position = 'bottom',
-    aspect.ratio = 1) +
+    text = element_text(size = 10)) +
+  scale_y_continuous(limits = c(0,1),
+                     breaks = seq(0, 1, 0.2)) +
   xlab("Leucozytozoon infection intensity") +
-  ylab("Survival probability [mean \U00B1 SE]") +
-  facet_wrap(~ageclass)
-
+  ylab("Survival probability \U03D5 [mean \U00B1 CI]") +
+  facet_wrap(~ageclass, ncol = 1,
+             strip.position = "right")
 p.leuco
+ggsave("plots/Fig_4_Leucocytozoon_Effect.tiff", device = "tiff", dpi = 300, width = 4, height = 6, units = "in")
 ```
 
 ##### Carnus 
@@ -755,145 +1011,118 @@ pred.model <- left_join(index.meta, pred.model[,c("par.index", "covdata", "estim
 
 p.ekto <- 
   ggplot(pred.model, aes(x = covdata, y = estimate, group = ageclass)) +
-  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = .25, size = 1.5) +
-  geom_point(size = 3, colour = "Black", shape = 15) +
-  scale_colour_brewer(palette = "Set1") + 
+  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = 0, size = 0.75) +
+  geom_point(size = 3, colour = "Black", shape = 20) +
   theme_classic() +
   theme(
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
     panel.border = element_rect(fill = NA),
-    panel.background = element_rect(fill = "Grey95"),
-    text = element_text(size = 12),
-    legend.position = 'bottom',
-    aspect.ratio = 1) +
+    text = element_text(size = 10)) +
+  scale_y_continuous(limits = c(0,1),
+                     breaks = seq(0, 1, 0.2)) +
   xlab("Ectoparasite infection intensity") +
-  ylab("Survival probability [mean \U00B1 CI]") +
-  facet_wrap(~ageclass)
+  ylab("Survival probability \U03D5 [mean \U00B1 CI]") +
+  facet_wrap(~ageclass, ncol = 1,
+             strip.position = "right")
 
 p.ekto
-```
+ggsave("plots/Fig_5_Carnus_Effect.tiff", device = "tiff", dpi = 300, width = 4, height = 6, units = "in")
 
+## multiplot
+p.ekto2 <- p.ekto +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank())
+p.leuco + p.ekto
+ggsave("plots/Fig_6_Leuco-Carnus_Effect.tiff", device = "tiff", dpi = 300, width = 6, height = 4, units = "in")
+```
 #### Resighting probabilies
 
-All supported models contain a time dependent effect on resighting probabilties, with an average estimate of `r mean(p.mod.avg$estimate)` (range: `r min(p.mod.avg$estimate)` - `r max(p.mod.avg$estimate)`) .
+All supported models (i.e. within $\Delta QAIC_C <=10$) contained a time-dependent component of the resighting probability, while a subset included an additive effect of Age (four classes).
 
 ```{r, message=FALSE, warning=FALSE}
-## compute means for sex and age combinations
-## exclude fixed values for know
-comb <- list(
-  list(time = 2008, age = 1, Age = "CY2"),
- 
-  list(time = 2009, age = 1, Age = "CY2"),
-  list(time = 2009, age = 2, Age = "CY3"),
-  
-  list(time = 2010, age = 1, Age = "CY2"),
-  list(time = 2010, age = 2, Age = "CY3"),
-  list(time = 2010, age = 3:13, Age = "CY4+"),           
-  list(time = 2011, age = 1, Age = "CY2"),
-  list(time = 2011, age = 2, Age = "CY3"),
-  list(time = 2011, age = 3:13, Age = "CY4+"),           
-  list(time = 2012, age = 1, Age = "CY2"),
-  list(time = 2012, age = 2, Age = "CY3"),
-  list(time = 2012, age = 3:13, Age = "CY4+"),         
-  list(time = 2013, age = 1, Age = "CY2"),
-  list(time = 2013, age = 2, Age = "CY3"),
-  list(time = 2013, age = 3:13, Age = "CY4+"),         
-  list(time = 2014, age = 1, Age = "CY2"),
-  list(time = 2014, age = 2, Age = "CY3"),
-  list(time = 2014, age = 3:13, Age = "CY4+"),         
-  list(time = 2015, age = 1, Age = "CY2"),
-  list(time = 2015, age = 2, Age = "CY3"),
-  list(time = 2015, age = 3:13, Age = "CY4+"),         
-  list(time = 2016, age = 1, Age = "CY2"),
-  list(time = 2016, age = 2, Age = "CY3"),
-  list(time = 2016, age = 3:13, Age = "CY4+"),         
-  list(time = 2017, age = 1, Age = "CY2"),
-  list(time = 2017, age = 2, Age = "CY3"),
-  list(time = 2017, age = 3:13, Age = "CY4+"),         
-  list(time = 2018, age = 1, Age = "CY2"),
-  list(time = 2018, age = 2, Age = "CY3"),
-  list(time = 2018, age = 3:13, Age = "CY4+"),         
-  list(time = 2019, age = 1, Age = "CY2"),
-  list(time = 2019, age = 2, Age = "CY3"),
-  list(time = 2019, age = 3:13, Age = "CY4+"),         
-  list(time = 2020, age = 1, Age = "CY2"),
-  list(time = 2020, age = 2, Age = "CY3"),
-  list(time = 2020, age = 3:13, Age = "CY4+")     
-)
-p.effect <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(p.mod.avg,
-               time == comb[[x]]$time,
-               age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl),
-             se = mean(dx$se),
-             time = comb[[x]]$time,
-             Age = comb[[x]]$Age)
+## derive ageclass-specfic annual survival estimates
+df.p.age <- lapply(rownames(p.mod.avg), function(row) {
+  x <- stringr::str_split(row, " ")[[1]]
+  data.frame(parameter = x[1],
+             cohort = substr(x[3], 2, nchar(x[3])),
+             year = as.numeric(substr(x[5], 2, nchar(x[5]))))
 }) %>% 
   do.call("rbind",.) %>% 
-  mutate(x = case_when(
-    Age == "CY2" ~ time - 0.25,
-    Age == "CY3" ~ time,
-    Age == "CY4+" ~ time + 0.25
-  ))
+  cbind(p.mod.avg) %>% 
+  mutate(ageclass = case_when(
+    age == 0 ~ 'CY1',
+    age == 1 ~ 'CY2',
+    age == 2 ~ 'CY3',
+    age %in% 3:13 ~ 'CY4plus' ## 3:13 are identical 
+  )) 
 
-
-p.res <- ggplot(p.effect, aes(x = x, 
-                              y = estimate,
-                              col = Age)) +
+p.res <- 
+  ggplot(filter(df.p.age, age %in% 1:3), aes(x = year, y = estimate, group = age)) +
+  geom_line(lty = "dotted", aes(col = age)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate +se,  color = age), width = 0, size = 1) +
+  geom_point(aes(col = age, shape = age), size = 2) +
   theme_classic() +
   theme(
+    axis.line = element_line(size = .7, color = "black"),
+    legend.position = "none",
+    panel.background = element_rect(fill = NA),
     panel.border = element_rect(fill = NA),
-    panel.background = element_rect(fill = "Grey95"),
-    text = element_text(size = 12)) +
-  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
-  geom_point(size = 1.5, shape = 15) +
+    text = element_text(size = 10)) +
+  scale_color_manual(values = c("#FDB863", "#B2ABD2", "#5E3C99"),
+                       labels = c("CY2", "CY3", "CY4+"),
+                     name = "Age class") +
+  scale_shape_manual(values = c(2, 5, 9),
+                      labels = c("CY2", "CY3", "CY4+"),
+                      name = "Age class") +
+  #scale_y_continuous(breaks = seq(0, 0.6, 15)) +
+  scale_x_continuous(breaks = seq(2007, 2020, 1), limits = c(2007, 2020)) +
   xlab("Year") +
-  ylab("Resighting probability [mean \U00B1 SE]") +
-  scale_x_continuous(breaks = seq(2008, 2020, 3)) + 
-  scale_y_continuous(expand = c(0,0), 
-                     limits = c(0,1),
-                     breaks = seq(0, 1, .2)) 
+  ylab("Resighting probability \U03C1 [mean \U00B1 SE]")
 p.res
+ggsave("plots/Fig_1b_ResProb.tiff", device = "tiff", dpi = 300, width = 6, height = 4, units = "in")
 ```
+
+```{r, echo=FALSE}
+mean(df.p.age$estimate[df.p.age$time %in% 2008:2013])*100
+sd(df.p.age$estimate[df.p.age$time %in% 2008:2013])/sqrt(length(2008:2013))*100
+
+mean(df.p.age$estimate[df.p.age$time %in% 2014:2020])*100
+sd(df.p.age$estimate[df.p.age$time %in% 2014:2020])/sqrt(length(2014:2020))*100
+```
+
+
 
 #### Recovery probabilites
 
-```{r, eval=F}
-mod.avg.r <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(r.mod.avg,
-               #Sex == comb[[x]]$Sex,
-               age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl), 
-             se = mean(dx$se),
-             #Sex = comb[[x]]$Sex,
-             Age = comb[[x]]$Age)
+```{r, eval=T}
+##  simplify model output
+df.r.age <- lapply(rownames(r.mod.avg), function(row) {
+  x <- stringr::str_split(row, " ")[[1]]
+  data.frame(parameter = x[1],
+             age = substr(x[4], 2, nchar(x[4])),
+             year = as.numeric(substr(x[5], 2, nchar(x[5]))))
 }) %>% 
-  do.call("rbind",.) 
-# %>% 
-#   mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
- 
-p.recov <- ggplot(mod.avg.r, aes(x = x, y = estimate, col = Sex)) +
-  theme_classic() +
-  theme(legend.position = "none",
-        legend.background = element_rect(fill = NA),
-        panel.border = element_rect(fill = NA),
-        panel.background = element_rect(fill = "Grey95"),
-        text = element_text(size = 12)) +
-  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
-  geom_point(size = 3, shape = 15) +
-  xlab("Age class") +
-  ylab("Recovery chances [mean \U00B1 SE]") +
-  scale_x_continuous(breaks = c(1:4), labels = c("CY1", "CY2", "CY3", "CY4plus")) +
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(-0.2,1.2),
-                     breaks = seq(0, 1, .2)) +
-  scale_colour_brewer(palette = "Set1")
+  do.call("rbind",.) %>% 
+  cbind(r.mod.avg) %>% 
+  subset(., select = c(estimate, se, lcl, ucl, age)) 
+df.r.age$age <- ifelse(df.r.age$age == "0", "CY1", "CY2+")
 
+p.recov <- ggplot(data = df.r.age, aes(x = age, y = estimate)) +
+  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = 0, size = 1, col = "Grey") +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se),
+                width = 0, size = 2, col = "Grey") +
+  geom_point(size = 3, shape = 19, col = "Black") +
+  theme_classic() +
+  theme(
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA),
+    text = element_text(size = 10)) +
+  scale_y_continuous(limits = c(0, 0.3), breaks = seq(0, 0.3, 0.1)) +
+  xlab("Age class") +
+  ylab("Recovery probability r") 
 p.recov
 ```
 
@@ -901,38 +1130,68 @@ p.recov
 
 #### Fidelity (F)
 
-```{r, message=FALSE, warning=FALSE}
-df.F <- 
-lapply(1:length(comb), function(x) {
-  dx <- filter(F.mod.avg, Sex == comb[[x]]$Sex, age %in% comb[[x]]$age)
-  data.frame(estimate = mean(dx$estimate),
-             lcl = mean(dx$lcl), 
-             ucl = mean(dx$ucl), 
-             se = mean(dx$se),
-             Sex = comb[[x]]$Sex,
-             Age = comb[[x]]$ageclass)
-}) %>% 
-  do.call("rbind",.) %>% 
-  mutate(x = c(0.8, 1.8, 2.8, 3.8, 1.2, 2.2, 3.2, 4.2))
- 
-p.fidel <- ggplot(df.F, aes(x = x, y = estimate, col = Sex)) +
-  theme_classic() +
-  theme(legend.position = "none",
-        legend.background = element_rect(fill = NA),
-        panel.border = element_rect(fill = NA),
-        panel.background = element_rect(fill = "Grey95"),
-        text = element_text(size = 12)) +
-  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se), width = .25, size = 1.5) +
-  geom_point(size = 3, shape = 15) +
-  xlab("Age class") +
-  ylab("Site fidelity [mean \U00B1 SE]") +
-  scale_x_continuous(breaks = c(1:4), labels = c("CY1", "CY2", "CY3", "CY4plus")) +
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(0,1.2),
-                     breaks = seq(0, 1, .2)) +
-  scale_colour_brewer(palette = "Set1")
+All substantially supported models suggest either constant or sex-dependent survival probabilities, while only a minor fraction of all supported models includes a sex effect. Hence, for visualisation purposes, only one point estimate for each sex is displayed.
 
-p.fidel
+```{r, message=FALSE, warning=FALSE}
+## estimates are essentially invariant based on model weights
+## Female mean estimate
+mean(F.mod.avg$estimate[F.mod.avg$Sex == "Female"])
+## variation
+var(F.mod.avg$estimate[F.mod.avg$Sex == "Female"])
+
+F.mod.avg$SE = F.mod.avg$se
+
+df.F <- data.frame(
+  Sex = c("Female", "Male"),
+  estimate = 
+    DBChecks::summary_stats(F.mod.avg,
+                            measurevar = "estimate",
+                            groupvars = c("Sex"))[["estimate"]],
+  lcl =
+    DBChecks::summary_stats(F.mod.avg,
+                            measurevar = "lcl",
+                            groupvars = c("Sex"))[["lcl"]],
+  ucl = 
+    DBChecks::summary_stats(F.mod.avg,
+                            measurevar = "ucl",
+                            groupvars = c("Sex"))[["ucl"]],
+  se = 
+    DBChecks::summary_stats(F.mod.avg,
+                            measurevar = "SE",
+                            groupvars = c("Sex"))[["SE"]])
+
+p.F <- ggplot(df.F, aes(x = Sex, y = estimate)) +
+  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = 0, size = 1, col = "Grey") +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se),
+                width = 0, size = 2, col = "Grey") +
+  geom_point(size = 3, shape = 19, col = "Black") +
+  theme_classic() +
+  theme(
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA),
+    text = element_text(size = 10)) +
+  xlab("Sex") +
+  ylab("Site-fidelity F") 
+p.F
+ggsave("plots/Fig_1_AgeEffect.tiff", device = "tiff", dpi = 300, width = 6, height = 4, units = "in") 
+```
+
+
+### Multiplot
+
+```{r}
+p.top <- p.age + theme(axis.text.x = element_blank(),
+              axis.title.x = element_blank(),
+              axis.ticks.x = element_blank())
+p.bot <- p.res
+p.top / p.bot
+ggsave("plots/Fig_1_S_Age_p_Age.tiff", device = "tiff", dpi = 300, 
+       width = 6, height = 6, units = "in")
+
+p.recov + p.F
+ggsave("plots/Fig_7_F_and_r_estimates.tiff", device = "tiff", dpi = 300, 
+       width = 6, height = 4, units = "in")
 ```
 
 
@@ -946,7 +1205,7 @@ dead <-
          !CauseDeath %in% c('Jumper', 'Poisoned', 'Shot')) %>% 
   mutate(HatchingDate = as.Date(paste0(Year, "-01-01")) + Hatch) %>% 
   mutate(DaysSinceHatching = as.Date(DateDeath) - HatchingDate) %>% 
-    filter(., DaysSinceHatching <= 366)
+    filter(., DaysSinceHatching <= 365)
 
 dead <- dead$Ring
 
@@ -975,23 +1234,28 @@ model <- glmer(
                data = df,
                family = "binomial")
 
-model.plot <- plot_model(model = model, sort.est = TRUE, transform = NULL,
-                         
-                         
-                         
-           title = "",
-           ci.lvl = .95,
-           ci.style = "whisker",
-           dot.size = 3,
-           line.size = 1.2,
-           ) +
-  theme_classic(base_size = 12) +
-  geom_hline(yintercept = 0, lty = "dashed") +
-  ylab("Effect size") + xlab("Model parameter") +
-  ggtitle(label = "First year survival", 
-          subtitle = paste0(" (Survived: ", length(df$surv[df$surv == 1]),
-                            " Died: ", length(df$surv[df$surv == 0]), ")")) 
+model.plot <- plot_model(
+  model = model,
+  sort.est = TRUE,
+  transform = NULL,
+  title = "",
+  ci.lvl = .95,
+  ci.style = "whisker",
+  dot.size = 3,
+  line.size = 1.2) +
+  theme_classic() +
+  theme(
+    axis.line = element_line(size = .7, color = "black"),
+    legend.background = element_rect(fill = NA),
+    legend.direction = "horizontal",
+    legend.position = c(.8,.05),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA),
+    text = element_text(size = 10)) +
+  geom_hline(yintercept = 0, lty = "dashed", alpha = .6) +
+  ylab("\U03B2 estimate") + xlab("")
 model.plot
+ggsave("plots/Fig_2_KnownCases.tiff", device = "tiff", dpi = 300, width = 6, height = 4, units = "in")
 tab_model(model,
           show.stat = T,
           string.est = "Estimate",
@@ -1007,71 +1271,9 @@ The implemenation for calculating the adjusted $\hat C$ via bootstrapping was ba
 
 ## Appendix
 
-#####  Hatching date
-
-```{r, message=FALSE, warning=FALSE, eval=FALSE}
-Hatch.index.values = 
-  seq(from =  min(df$Hatch), to = max(df$Hatch), length.out = 100)
-
-## Extract get 'par.index' of interest
-index.meta <- data.frame(
-  Sex = rep(c("Female", "Male"), each = 4),
-  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 2)) %>% 
-  ## add par.index
-  left_join(., ddl$S[,c("par.index", "Sex", "ageclass")],
-            by = c("Sex", "ageclass")) %>% 
-  ## code additional vars
-  mutate(dummy = paste0(Sex, ageclass)) 
-
-## simplify, one par.index for each dummy var
-model.indices <- sapply(unique(index.meta$dummy), function(x) {
-  ## return first row matching the query
-  index.meta[index.meta$dummy == x,"par.index"][1]
-}) %>% 
-  unlist()
-
-## subset index.meta
-index.meta <- index.meta[index.meta$par.index %in% model.indices,]
-
-## get estimates from the model
-pred.model <- covariate.predictions(
-  supported.models, 
-  data = data.frame(
-    Hatch = Hatch.index.values, Hacth.index.sq = Hatch.index.values^2), 
-  indices = model.indices %>% as.numeric(),
-  drop = T)[["estimates"]]
-
-## extend df with grouping variables
-pred.model <- left_join(pred.model,
-                        index.meta[,c("par.index", "ageclass", "Sex")],
-                        by = "par.index") %>% 
-  mutate(Group = paste0(Sex, ageclass))
-head(pred.model)
-
-p.hatch <- 
-  ggplot(pred.model, aes(x = Hatch, y = estimate, group = Group)) +
-  geom_line(size = 1.5,aes(colour = Sex)) +
-  geom_ribbon(aes(ymin = lcl, ymax = ucl, colour = Sex), alpha = 0.2) +
-  scale_colour_brewer(palette = "Set1") + 
-  theme_classic() +
-  theme(
-    panel.border = element_rect(fill = NA),
-    panel.background = element_rect(fill = "Grey95"),
-    text = element_text(size = 12),
-    legend.position = 'none',
-    aspect.ratio = 1) +
-  xlab("Standardised Hatching date") +
-  ylab("Survival probability [mean \U00B1 CI]") +
-  scale_y_continuous(expand = c(0,0), 
-                     limits = c(0,1),
-                     breaks = seq(0, 1, .2)) +
-  facet_wrap(~ageclass)
-p.hatch
-```
-
 ##### Morph
 
-```{r, message=FALSE, warning=FALSE, eval=FALSE}
+```{r, eval=FALSE, echo=F, message=FALSE, warning=FALSE, eval=FALSE}
 Morph = 2:4
 
 ## Extract get par.index of interest
@@ -1132,62 +1334,6 @@ p.Morph <-
 
 p.Morph
 ```
-
-
-##### Brood Rank
-
-```{r, message=FALSE, warning=FALSE}
-Rank = 1:4
-
-## Extract get par.index of interest
-index.meta <- data.frame(
-  ageclass = rep(c("CY1", "CY2", "CY3", "CY4plus"), 1)) %>%   
-  ## add par.index
-  left_join(., ddl$S[,c("par.index", "ageclass")]) %>% 
-  ## code additional vars
-  mutate(dummy = paste0(ageclass)) 
-
-## simplify, one par.index for each dummy var
-model.indices <- sapply(unique(index.meta$dummy), function(x) {
-  ## return first row matching the query
-  index.meta[index.meta$dummy == x,"par.index"][1]
-}) %>% 
-  unlist()
-
-index.meta <- index.meta[index.meta$par.index %in% model.indices,]
-
-pred.rank <- covariate.predictions(
-  supported.models, 
-  data = data.frame(
-    Rank = Rank, bl.index.sq = Rank^2), 
-  indices = index.meta$par.index)[["estimates"]]
-
-## extend df with grouping variables
-pred.model <- left_join(pred.rank, index.meta[,c("par.index", "ageclass")], by = "par.index") %>% 
-  mutate(Group = ageclass)
-
-pred.model <- left_join(index.meta, pred.model[,c("par.index", "Rank", "estimate", "lcl", "ucl", "ageclass", "Group")]) %>% 
-  unique.data.frame()
-
-p.rank <- 
-  ggplot(pred.model, aes(x = Rank, y = estimate, group = ageclass)) +
-  geom_errorbar(aes(ymin = lcl, ymax = ucl), width = .25, size = 1.5) +
-  geom_point(size = 3, colour = "Black", shape = 15) +
-  scale_colour_brewer(palette = "Set1") + 
-  theme_classic() +
-  theme(
-    panel.border = element_rect(fill = NA),
-    panel.background = element_rect(fill = "Grey95"),
-    text = element_text(size = 12),
-    legend.position = 'bottom',
-    aspect.ratio = 1) +
-  xlab("Brood Rank") +
-  ylab("Survival probability [mean \U00B1 CI]") +
-  facet_wrap(~ageclass)
-
-p.rank
-```
-
 
 ## Literature cited
 

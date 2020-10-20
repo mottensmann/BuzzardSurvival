@@ -1,5 +1,7 @@
 
-## R-code for survival analysis using combined dead and live encounter data of buzzards *Buteo buteo*
+## *In preparation* R-code for survival analysis using combined dead and live encounter data of buzzards *Buteo buteo*
+
+<img src="plots/Fig_1_S_Age_p_Age.png" width="576" style="display: block; margin: auto;" />
 
   - **R\_code.html** contains the code for all analyses. In addition, we
     provide our data files in the folder called `data`, which should be

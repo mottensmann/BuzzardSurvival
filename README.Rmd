@@ -10,7 +10,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-## R-code for survival analysis using combined dead and live encounter data of buzzards *Buteo buteo* 
+## *In preparation* R-code for survival analysis using combined dead and live encounter data of buzzards *Buteo buteo* 
+
+```{r, fig.align='center', fig.height=6, fig.asp=1, echo=FALSE}
+knitr::include_graphics(path = "plots/Fig_1_S_Age_p_Age.png", dpi = 300)
+```
+
 
 * **R_code.html** contains the code for all analyses. In addition, we provide our data files in the folder called `data`, which should be placed in a subfolder of the working directory in order to repeat analyses.
 
