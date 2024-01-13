@@ -1,0 +1,617 @@
+---
+title: "R-code for 'Survival of common buzzards: Effects of condition, parasites, and climate on individual-specific rates.'"
+author: "Meinolf Ottensmann, Anja Wiegmann, Tony Rinaud, Oliver Krüger, Christina Strube, Jamie Winternitz and Nayden Chakarov"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(
+  fig.width = 8, fig.height = 8,highlight = TRUE, comment = "#>",
+  strip.white = TRUE,collapse = TRUE, fig.align = "center", cache = TRUE,
+  warning = F, message = F)
+```
+
+
+This document provides the `R code` for a supplementary analysis of the Capture-Mark-Resighting data using a simpler `CJS` model. See the RMarkdown file `01_R_code` for more background on the main analyses presented in our paper. 
+
+```{r, message=FALSE, warning=FALSE}
+if ("EnvStats" %in% rownames(installed.packages())) {
+  library("EnvStats")
+} else {
+  install.packages("EnvStats")
+}
+if ("magrittr" %in% rownames(installed.packages())) {
+  library("magrittr")
+} else {
+  install.packages(magrittr)
+}
+if ("patchwork" %in% rownames(installed.packages())) {
+  library("patchwork")
+} else {
+  install.packages(patchwork)
+}
+if ("RMark" %in% rownames(installed.packages())) {
+  library("RMark")
+} else {
+  install.packages(RMark)
+}
+if ("tidyverse" %in% rownames(installed.packages())) {
+  library("tidyverse")
+} else {
+  install.packages(tidyverse)
+}
+if ("egg" %in% rownames(installed.packages())) {
+  library("egg")
+} else {
+  install.packages(egg)
+}
+if ("latex2exp" %in% rownames(installed.packages())) {
+  library("latex2exp")
+} else {
+  install.packages(latex2exp)
+}
+```
+
+Furthermore, a number of custom scripts are required. All of these are available within the file `R/custom_functions.R`. The function `source()` enables to use them.
+
+```{r}
+source("R/custom_functions.R")
+```
+
+Individual-specific data are available as `ringing_data` (i.e., details on ringing dates and individual-specific covariates) and `resighting_data` (i.e., details on live encounters).
+
+```{r, message=FALSE}
+ringing_data <- as.data.frame(read_csv("data/ringing_data.csv")) 
+resighting_data <- as.data.frame(read_csv("data/resighting_data.csv")) %>% 
+  filter(Ring %in% ringing_data$Ring)
+```
+
+Additionally, we use North Atlantic oscillation (`NAO`) indices that are based on the principal component approach [\^8], retrieved from <https://climatedataguide.ucar.edu/climate-data/hurrell-north-atlantic-oscillation-nao-index-pc-based> (last changed 2021-08-28). As recording intervals cross years (May - April), NAO indices for the subsequent year need to be assigned: E.g., 2007 and DJFM 2008.
+
+Note, for each recording interval, DJFM values of the subsequent year are used (e.g., cohort 2007 = NAO in 2008). This is taken care of by defining years
+
+```{r}
+nao <- read.table("data/nao.txt", header = T) %>% 
+  mutate(time = as.factor(year - 1))
+```
+
+Add climate data from local weather stations
+
+```{r}
+climate.data <- readRDS("data/climate.data.RDS")
+climate.data$season$time <- as.factor(climate.data$season$time)
+nao <- left_join(nao, climate.data$season, by = "time")
+```
+
+## Modelling of survival probabilities
+### CJS model (live encounters)
+
+We model survival probabilities using  live encounter events using the `CJS` model implemented in software `MARK`. This model does not allow missing covariates and hence we need to subset the dataset first (i.e., removing the cohort of 2008 where no data on *Leucocytozoon* infection status is available):
+
+```{r}
+## Subset to wing-tagged birds with complete covariates
+## ----------------------------------------------------
+ringing_data <- filter(
+  ringing_data,
+  # Subset to wing-tagged only
+  Tag ==  1, 
+  # Remove birds that died in the nest
+  !CauseDeath %in% "Dead as chick",
+  # Remove two birds predated as nestling
+  !Ring %in% c("3408543", "3417787"),
+  # known Sex
+  !is.na(Sex),
+  # No missing covariate 
+  !is.na(Lprev),
+  # Keep birds with assigned morph
+  Morph %in% 2:4) %>% 
+  #mutate(Rank = case_when(Rank == "1" ~ "A", Rank != "1" ~ "B")) %>% 
+  mutate(Lbinom = as.factor(ifelse(Lprev == 0, "Uninfected", "Infected"))) %>% 
+  ## scale continuous variables
+  mutate(Hatch = scale(Hatch)) %>% 
+  mutate(Age_days = scale(Age_days)) %>% 
+  mutate(BCI = scale(BCI))
+```
+
+At this stage, we retain a total of `r nrow(ringing_data)` individuals, corresponding to a mean cohort size of `r mean(table(ringing_data$Year))` [Range: `r min(table(ringing_data$Year))` - `r max(table(ringing_data$Year))`].
+
+Based on ringing data and re-sightings of individuals, we assemble combined live-dead encounter histories for all individuals using the custom function `create.ld`. This functions generates a vector of the form `LDLDLD`, where `L` codes captures (here, only the marking occasion) and `D` codes both dead recoveries (D = 1) and live re-sightings (D = 2) between sampling intervals. Together, each `LD` pair codes for one interval of the study period. Next, we define the model structure for the `Burnham` model and code the required design data.
+
+```{r, eval=FALSE}
+## NOT run, output is saved
+## Code capture histories (ch) and reformat data
+## ------------------------------------------------------
+df.CJS <- data.frame(
+  ringing_data,
+  ## get live-encounters
+  ch =  ld2l(create.ld(
+    start = 2007,
+    end = 2020, 
+    ringing_data = ringing_data,
+    resights = resighting_data))) %>% 
+  mutate(ch = as.character(ch)) %>% 
+  mutate(Morph = factor(Morph, labels = c("D","I","L"))) %>% 
+  mutate(Sex = as.factor(Sex)) %>%
+  subset(., select = -c(Ring, Tag, Dead, DateDeath, CauseDeath)) 
+
+## process the data for RMark
+## ------------------------------------------------------
+dp.CJS  <- process.data(data = df.CJS, model = "CJS", begin.time = 2007,
+                    groups = c("Sex", "Morph", "Lbinom"))
+
+## create design data
+## ------------------------------------------------------
+ddl.CJS <- make.design.data(dp.CJS) 
+
+## Bin age-classes
+## Survival S:
+## ------------------------------------------------------ 
+ddl.CJS <- add.design.data(
+  data = dp.CJS, ddl = ddl.CJS, parameter="Phi", type = "age",
+  name = "age", bins = c(0, 1, 2, 13),
+  right = FALSE, replace = TRUE)
+
+## Add dummy variable to restrict some factors to affect only first
+## certain age classes
+## ---------------------------------------------------------------
+## First year
+ddl.CJS$Phi$y1 <- 0
+ddl.CJS$Phi$y1[ddl.CJS$Phi$age == "[0,1)"] <- 1
+
+## Recapture probability p:
+## ------------------------------------------------------
+ddl.CJS <- add.design.data(
+  data = dp.CJS, ddl = ddl.CJS, parameter = "p", type = "age",
+  name = "age", bins = c(0, 1, 2, 13),
+  right = FALSE, replace = TRUE)
+ddl.CJS$p <- ddl.CJS$p %>% 
+  mutate(ageclass2 = case_when(
+    age == "[1,2)" ~ "CY2",
+    age != "[1,2)" ~ "CY3plus"
+  ))
+
+## collect variables which are year but not individual specific
+## ------------------------------------------------------
+covars <- left_join(data.frame(time = ddl.CJS$Phi$time), nao, "time")
+
+## extend design data with NAO indices
+## ------------------------------------------------------
+ddl.CJS$Phi$NAO <- covars$DJFM
+
+## Save files for later use 
+## -----------------------------------------------------------------------------
+saveRDS(df.CJS, file = "data/df.CJS.RDS", compress = "bzip2")
+saveRDS(dp.CJS, file = "data/dp.CJS.RDS", compress = "bzip2")
+saveRDS(ddl.CJS, file = "data/ddl.CJS.RDS", compress = "bzip2")
+```
+
+Load data previously aggregated using the above code
+
+```{r}
+df.CJS <- readRDS("data/df.CJS.RDS")
+dp.CJS <- readRDS("data/dp.CJS.RDS")
+ddl.CJS <- readRDS("data/ddl.CJS.RDS")
+```
+
+#### Candidate models
+
+```{r, eval=FALSE}
+do_analysis.CJS = function(dp.CJS, ddl.CJS) {
+  ## Models for Survival S
+  ## ---------------------------------------------------------------------------
+  
+  ## Null model: Invariant 
+  ## ---------------------------------------------------------------------------
+  Phi.01 = list(formula = ~ age, fixed = list(cohort = 2008, value = 1))
+  Phi.02 = list(formula = ~ age + time, fixed = list(cohort = 2008, value = 1))
+  Phi.03 = list(formula = ~ age + NAO, fixed = list(cohort = 2008, value = 1))
+  Phi.04 = list(formula = ~ age * NAO, fixed = list(cohort = 2008, value = 1))
+  Phi.05 = list(formula = ~ age + NAO + time, fixed = list(cohort = 2008, value = 1))
+  Phi.06 = list(formula = ~ age * NAO + time, fixed = list(cohort = 2008, value = 1))
+  
+  ## Sex
+  ## ---------------------------------------------------------------------------
+  Phi.07 = list(formula = ~ age + Sex, fixed = list(cohort = 2008, value = 1))
+  Phi.08 = list(formula = ~ age + time + Sex, fixed = list(cohort = 2008, value = 1))
+  Phi.09 = list(formula = ~ age + NAO + Sex, fixed = list(cohort = 2008, value = 1))
+  Phi.10 = list(formula = ~ age * NAO + Sex, fixed = list(cohort = 2008, value = 1))
+  Phi.11 = list(formula = ~ age + NAO + time + Sex, fixed = list(cohort = 2008, value = 1))
+  Phi.12 = list(formula = ~ age * NAO + time + Sex, fixed = list(cohort = 2008, value = 1))
+  
+  ## Morph
+  ## ---------------------------------------------------------------------------
+  Phi.13 = list(formula = ~ age + Morph, fixed = list(cohort = 2008, value = 1))
+  Phi.14 = list(formula = ~ age + time + Morph, fixed = list(cohort = 2008, value = 1))
+  Phi.15 = list(formula = ~ age + NAO + Morph, fixed = list(cohort = 2008, value = 1))
+  Phi.16 = list(formula = ~ age * NAO + Morph, fixed = list(cohort = 2008, value = 1))
+  Phi.17 = list(formula = ~ age + NAO + time + Morph, fixed = list(cohort = 2008, value = 1))
+  Phi.18 = list(formula = ~ age * NAO + time + Morph, fixed = list(cohort = 2008, value = 1))
+  ## Leucocytozoon
+  ## ---------------------------------------------------------------------------
+  Phi.19 = list(formula = ~ age + Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.20 = list(formula = ~ age + time + Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.21 = list(formula = ~ age + NAO + Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.22 = list(formula = ~ age * NAO + Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.23 = list(formula = ~ age + NAO + time + Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.24 = list(formula = ~ age * NAO + time + Lbinom, fixed = list(cohort = 2008, value = 1))
+  
+  Phi.25 = list(formula = ~ age + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.26 = list(formula = ~ age + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.27 = list(formula = ~ age + NAO + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.28 = list(formula = ~ age * NAO + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.29 = list(formula = ~ age + NAO + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.30 = list(formula = ~ age * NAO + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  
+  Phi.31 = list(formula = ~ age + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.32 = list(formula = ~ age + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.33 = list(formula = ~ age + NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.34 = list(formula = ~ age * NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.35 = list(formula = ~ age + NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  Phi.36 = list(formula = ~ age * NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  
+  ## Body condition
+  ## ---------------------------------------------------------------------------
+  Phi.37 = list(formula = ~ age + BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.38 = list(formula = ~ age * BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.39 = list(formula = ~ age + time + BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.40 = list(formula = ~ age * BCI + time, fixed = list(cohort = 2008, value = 1))
+  Phi.41 = list(formula = ~ age + NAO + BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.42 = list(formula = ~ age * BCI + NAO, fixed = list(cohort = 2008, value = 1))
+  Phi.43 = list(formula = ~ age + NAO + time + BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.44 = list(formula = ~ age * BCI + time + NAO, fixed = list(cohort = 2008, value = 1))
+  Phi.45 = list(formula = ~ age + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.46 = list(formula = ~ age + time + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.47 = list(formula = ~ age + NAO + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.48 = list(formula = ~ age + NAO + time + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.49 = list(formula = ~ age * NAO + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  Phi.50 = list(formula = ~ age * NAO + time + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  
+  ## Rank
+  ## ---------------------------------------------------------------------------
+  Phi.51 = list(formula = ~ age + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  Phi.52 = list(formula = ~ age + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  Phi.53 = list(formula = ~ age + NAO + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  Phi.54 = list(formula = ~ age * NAO + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  Phi.55 = list(formula = ~ age + NAO + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  Phi.56 = list(formula = ~ age * NAO + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  
+  ## Hatching date
+  ## ---------------------------------------------------------------------------
+  Phi.57 = list(formula = ~ age + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  Phi.58 = list(formula = ~ age + time + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  Phi.59 = list(formula = ~ age + NAO + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  Phi.60 = list(formula = ~ age * NAO + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  Phi.61 = list(formula = ~ age + NAO + time + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  Phi.62 = list(formula = ~ age * NAO + time + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  
+  ## Age at sampling date
+  ## ---------------------------------------------------------------------------
+  Phi.63 = list(formula = ~ age + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  Phi.64 = list(formula = ~ age + time + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  Phi.65 = list(formula = ~ age + NAO + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  Phi.66 = list(formula = ~ age * NAO + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  Phi.67 = list(formula = ~ age + NAO + time + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  Phi.68 = list(formula = ~ age * NAO + time + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  
+  ## Models for re-sighting probability p
+  ## p.time.age: Not supported
+  ## ---------------------------------------------------------------------------
+  p.dot = list(formula = ~ 1, fixed = list(cohort = 2008, value = 0))
+  p.time = list(formula = ~ time, fixed = list(cohort = 2008, value = 0))
+
+  ## Compile model list based on parameter combinations
+  ## ---------------------------------------------------------------------------
+  cml = create.model.list(model = "CJS")
+  
+  ## Run models
+  ## ---------------------------------------------------------------------------
+  results.CJS = mark.wrapper.parallel(
+    model.list = cml, data = dp.CJS, ddl = ddl.CJS,
+    output = FALSE, silent = FALSE, cpus = 20, parallel = TRUE)
+  return(results.CJS)
+}
+
+## Conduct analysis
+## ---------------------------------------------------------------------------
+models.CJS <- do_analysis.CJS(dp.CJS =  dp.CJS, ddl.CJS = ddl.CJS)
+#saveRDS(models.CJS, file = "data/models.CJS.RDS", compress = 'bzip2')
+
+## adjust for over dispersion using c-hat
+## ---------------------------------------------------------------------------
+load("data/c.hat.burnham.RData")
+models.CJS.adj <-  adjust.chat(model.list = models.CJS, chat = c.hat$median) 
+saveRDS(models.CJS.adj, file = "data/models.CJS.adj.RDS", compress = 'bzip2')
+
+## Select supported models
+## ---------------------------------------------------------------------------
+Large.AICc <- 
+  rownames(models.CJS.adj$model.table)[which(models.CJS.adj$model.table[["DeltaQAICc"]] > 7)] %>% 
+  as.numeric()
+
+supported.models.CJS <- remove.mark(
+  marklist = models.CJS.adj,
+  model.numbers = Large.AICc)
+saveRDS(supported.models.CJS, file = "data/supported.models.CJS.RDS")
+cleanup(ask = FALSE)
+unlink(list.files(pattern = "mark", ignore.case = F))
+```
+
+#### Results
+
+```{r}
+## all models
+#models.CJS <- readRDS("data/models.CJS.RDS")
+## models with adjusted deviance
+models.CJS.adj <- readRDS("data/models.CJS.adj.RDS")
+## models within Delta_QAICc <= 10 of the top ranking
+supported.models.CJS <- readRDS("data/supported.models.CJS.RDS")
+```
+
+```{r, eval=FALSE, echo=FALSE}
+## tabulise models
+models <- data.frame(model.number = 1:(length(models.CJS.adj) - 1),
+                     model = sapply(models.CJS.adj[1:(length(models.CJS.adj) - 1)], function(x) x[["model.name"]]))
+
+#View(supported.models.CJS$model.table)
+```
+
+
+##### Model averaging
+
+Models including age, time, NAO and an additional covariate (BCI or *Leucocytozoon* prevalence) are not fully estimatable due to boundary estimates! For survival estimates this is the case for the following two models that are thus not considered in model averaging.
+
+```{r}
+Phi.mod.avg <- model.average(supported.models.CJS,
+                           parameter = "Phi", drop = T, vcv = T)[["estimates"]] %>%
+  ## estimates 2-13 are identical, but age == 3 needed for 2010!
+  filter(fixed != "Fixed", age %in% 0:3) %>% 
+  subset(., select = c(estimate, se, lcl, ucl, age, Sex, Morph, Lbinom)) %>% 
+  unique.data.frame()
+
+## Model average recovery estimates (r)
+## -----------------------------------------------------------------------------
+p.mod.avg <- model.average(supported.models.CJS,
+                           parameter = "p", drop = T, vcv = T)[["estimates"]] %>% 
+  filter(fixed != "Fixed") %>% 
+  subset(., select = (c(estimate, se, lcl, ucl, age, Sex))) %>% 
+  unique.data.frame()
+```
+
+
+##### Model selection
+
+```{r, eval=FALSE}
+## Format model table
+## -----------------------------------------------------------------------------
+model.table <- 
+  models.CJS.adj$model.table[,c("model", "DeltaQAICc", "weight", "npar", "QDeviance")] 
+
+## Change parameter names to enhance readability 
+## -----------------------------------------------------------------------------
+model.table$model <- 
+  stringr::str_replace_all(model.table$model, "~", "")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Lbinom", "Leucocytozoon")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Hatch", "Hatch date")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Age_days", "Nestling")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "BCI", "Body condition")
+model.table$model <-
+  stringr::str_replace(model.table$model, "ageclass2", "Ageclass2")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "age", "AgeClass3")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Nestling", "Nestling age")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "y1", "Juvenile")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "time", "Time")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "p(1)", "p(0)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "F(1)", "F(1)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "F'(1)", "F'(0)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "R'(1)", "R'(.)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "r(1)", "r(.)")
+
+readr::write_csv(model.table, "data/adjusted.models.CJS.csv")
+```
+
+##### Parameter weights
+
+Compute cumulative weights based on all models including a certain parameter.
+
+```{r}
+## Variable importance parameter S
+## -----------------------------------------------------------------------------
+vars <- c("time", "BCI", "NAO", "Sex", "Rank", "Hatch", "Lbinom", "y1:Age_days", "Morph", "y1:BCI")
+
+Phi.weights <- sapply(vars, function(var) {
+  t <- filter(models.CJS.adj$model.table, stringr::str_detect(Phi, var))
+  sum(t$weight) %>% round(.,3)
+})
+data.frame(Parameter = vars, weight = Phi.weights)
+
+## variable importance parameter p
+## -----------------------------------------------------------------------------
+vars <- c("1", "time")
+
+p.weights <- sapply(vars, function(var) {
+  t <- filter(models.CJS.adj$model.table, stringr::str_detect(p, var))
+  sum(t$weight) %>% round(.,3)
+})
+data.frame(Parameter = vars, weight = p.weights)
+```
+
+
+##### Survival rates (S)
+
+Visualise age and time-specific survival estimates. **Note: Except for age and time no other factor plays a role for the survival estimates (e.g., Morph, Rank, infection status)** Hence, rounding estimates at a precision of six digits allows to simplify the output in such a way that there is a single unique estimate per year and age combination.
+
+```{r, message=FALSE, warning=FALSE}
+## Format and simplify 
+## -----------------------------------------------------------------------------
+df.Phi.age <- lapply(rownames(Phi.mod.avg), function(row) {
+  x <- stringr::str_split(row, " ")[[1]]
+  data.frame(parameter = x[1],
+             cohort = substr(x[3], 2, nchar(x[3])),
+             year = as.numeric(substr(x[5], 2, nchar(x[5]))))
+}) %>% 
+  do.call("rbind",.) %>% 
+  cbind(Phi.mod.avg) %>% 
+  mutate(ageclass = case_when(
+    age == 0 ~ 'Juvenile',
+    age == 1 ~ 'Subadult',
+    age %in% 2:13 ~ 'Adult'  
+  )) %>% 
+  mutate(ageclass = factor(ageclass, levels = c("Juvenile", "Subadult", "Adult"))) %>% 
+  ## round mean, se and CI values at fifth decimal to remove redundant values
+  subset(., select = c(year, estimate, se, lcl, ucl, ageclass)) %>% 
+  mutate(estimate = round(estimate, 6)) %>% 
+  mutate(se = round(se, 6)) %>% 
+  mutate(lcl = round(lcl, 6)) %>% 
+  mutate(ucl = round(ucl, 6)) %>% 
+  unique.data.frame()
+
+## Estimate means for age-classes
+## ---------------------------------------------------------------
+df.annotation <- df.Phi.age %>% 
+  group_by(ageclass) %>%
+  summarise(
+    Median = median(estimate),
+    mean  = mean(estimate),
+    Min = min(estimate),
+    Max = max(estimate),
+    N = length(estimate),
+    SD = stats::sd(estimate)) %>% 
+  mutate(SE = SD/sqrt(N))
+
+p.age <- 
+  ggplot(df.Phi.age,
+         aes(x = year, y = estimate)) +
+  geom_errorbar(aes(ymin = lcl, ymax = ucl) ,
+                colour = "grey80", size = 1, width = 0) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se) ,
+                colour = "black", size = 1.2, width = 0) +
+  geom_line() +
+  geom_point(color = "black", fill = "Orange", size = 1.75, shape = 21) +
+  theme_article() +
+  theme(
+    # panel.grid.major.y = element_line(colour = "grey90", size = 0.5),
+    # panel.grid.minor.y = element_line(colour = "grey90", size = 0.5),
+    axis.line = element_line(size = .7, color = "black"),
+    legend.background = element_rect(fill = NA, colour = NA),
+    legend.margin = margin(c(1,1,1,1)),
+    legend.direction = "horizontal",
+    legend.position = "none",
+    legend.justification = c(1,1),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA)) +
+  scale_color_brewer(palette = "Set1",
+                     name = "") +
+  scale_y_continuous(breaks = seq(0, 1, .2), limits = c(0, 1)) +
+  scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+  xlab("") +
+  ylab("Annual survival probability") +
+  facet_wrap(~ageclass, ncol = 1, strip.position = "left") +
+  geom_text(data = df.annotation, x = 2007, y = -Inf,
+            hjust   = 0, vjust   = -0.8, col = "Black", size = 3,
+            aes(label = paste0("mean: ",round(mean,2))))
+p.age
+```
+
+Mean estimates for age and sex combinations over time
+
+```{r, warning=FALSE, results='markup'}
+## Age-specific means
+## -----------------------------------------------------------------------------
+df.Phi.age %>% 
+  group_by(ageclass) %>% 
+  summarise(Mean = round(mean(estimate),2),
+            Mean.SE = round(sd(estimate)/sqrt(length(estimate)),2),
+            Min = round(min(estimate), 2),
+            Max = round(max(estimate), 2),
+            .groups = "keep") %>% 
+  as.data.frame()
+```
+
+```{r}
+nao$sign <- ifelse(nao$DJFM > 0, "+", "-")
+p.nao <- 
+    ggplot(filter(nao, year > 2007),
+           aes(x = year - 1, y = DJFM, col = sign)) +
+    geom_line(col = "black") +
+    geom_point(size = 1.75) +
+    theme_article() +
+    theme(
+      legend.position = "none",
+      axis.line = element_line(size = .7, color = "black"),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+    scale_color_brewer(palette = "Set1",direction = -1) +
+    geom_hline(yintercept = 0, lty = "dotted") +
+    xlab("Survival period") +
+    ylab("NAO")
+
+p.snow <- 
+  ggplot(filter(nao, year > 2007),
+         aes(x = year - 1, y = snow)) +
+  geom_line(col = "black") +
+  geom_point(size = 1.75) +
+  theme_article() +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA)) +
+  scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+  scale_color_brewer(palette = "Set1",direction = -1) +
+  xlab("Survival period") +
+  ylab("Snow")
+
+p.temp <- 
+  ggplot(filter(nao, year > 2007),
+         aes(x = year - 1, y = temp)) +
+  geom_line(col = "black") +
+  geom_point(size = 1.75) +
+  theme_article() +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA)) +
+  scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+  scale_color_brewer(palette = "Set1",direction = -1) +
+  xlab("Survival period") +
+  ylab("Mean emperature [°C]")
+
+Fig_S9 <- (p.age + theme(axis.text.x = element_blank(),
+               axis.ticks.x = element_blank())) +  
+  (p.nao + theme(axis.text.x = element_blank(),
+                 axis.title.x = element_blank(),
+                 axis.ticks.x = element_blank())) +
+  p.snow +
+  plot_layout(ncol = 1, heights = c(4, 1,1)) +
+  plot_annotation(tag_levels = "A")
+Fig_S9
+```
+
+```{r, eval=FALSE, echo=FALSE}
+ggsave(plot = Fig_S9, filename = "plots/Fig_S9.pdf", 
+        device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
+ggsave(plot = Fig_S9, filename = "plots/Fig_S9.png", 
+        device = "png", dpi = 1200, width = 6, height = 6, units = "in")
+```
+
+```{r, eval=FALSE, echo=FALSE}
+sessionInfo()
+```

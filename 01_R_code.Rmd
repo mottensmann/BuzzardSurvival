@@ -1,0 +1,1781 @@
+---
+title: "R-code for 'Survival of common buzzards: Effects of condition, parasites, and climate on individual-specific rates'"
+author: "Meinolf Ottensmann, Anja Wiegmann, Tony Rinaud, Oliver Krüger, Christina Strube, Jamie Winternitz and Nayden Chakarov"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(
+  fig.width = 8, fig.height = 8,highlight = TRUE, comment = "#>",
+  strip.white = TRUE,collapse = TRUE, fig.align = "center", cache = TRUE,
+  warning = F, message = F)
+```
+
+
+This document provides all the `R code` used in our paper. Both the Rmarkdown file and the data can be downloaded from the accompanying GitHub repository on (<https://github.com/mottensmann/BuzzardSurvival>) as a zip archive containing all the files. We recommend to download or clone this [GitHub repository](https://github.com/mottensmann/BuzzardSurvival) in order to access the documentation together with all the files that are needed to repeat analyses shown in this document. Just click on the link above and then on the green box `Clone or download`. In order to function properly, the same structure of folders must be kept. If you have any questions, don't hesitate to contact [meinolf.ottensmann\@web.de](mailto:meinolf.ottensmann@web.de){.email}
+
+In order to repeat analyses presented in this manuscript program [`MARK` click here](http://www.phidot.org/software/mark/) needs to be installed. Additionally,
+a number of packages that extend the functionalities of base `R` are required. If not available, these packages can be installed using the code below:
+
+
+```{r, message=FALSE, warning=FALSE}
+if ("emmeans" %in% rownames(installed.packages())) {
+  library("emmeans")
+  emmeans::emm_options(lmerTest.limit = 9999)
+  emmeans::emm_options(pbkrtest.limit = 9999)
+  
+} else {
+  install.packages("emmeans")
+}
+if ("EnvStats" %in% rownames(installed.packages())) {
+  library("EnvStats")
+} else {
+  install.packages("EnvStats")
+}
+if ("forestmodel" %in% rownames(installed.packages())) {
+  library("forestmodel")
+} else {
+  install.packages(forestmodel)
+}
+if ("lme4" %in% rownames(installed.packages())) {
+  library("lme4")
+} else {
+  install.packages(lme4)
+}
+if ("magrittr" %in% rownames(installed.packages())) {
+  library("magrittr")
+} else {
+  install.packages(magrittr)
+}
+if ("patchwork" %in% rownames(installed.packages())) {
+  library("patchwork")
+} else {
+  install.packages(patchwork)
+}
+if ("RMark" %in% rownames(installed.packages())) {
+  library("RMark")
+} else {
+  install.packages(RMark)
+}
+if ("sjPlot" %in% rownames(installed.packages())) {
+  library("sjPlot")
+} else {
+  install.packages(sjPlot)
+}
+if ("sjlabelled" %in% rownames(installed.packages())) {
+  library("sjlabelled")
+} else {
+  install.packages(sjlabelled)
+}
+if ("sjmisc" %in% rownames(installed.packages())) {
+  library("sjmisc")
+} else {
+  install.packages(sjmisc)
+}
+if ("tidyverse" %in% rownames(installed.packages())) {
+  library("tidyverse")
+} else {
+  install.packages(tidyverse)
+}
+if ("egg" %in% rownames(installed.packages())) {
+  library("egg")
+} else {
+  install.packages(egg)
+}
+if ("latex2exp" %in% rownames(installed.packages())) {
+  library("latex2exp")
+} else {
+  install.packages(latex2exp)
+}
+```
+
+Furthermore, a number of custom scripts are required. All of these are available within the file `R/custom_functions.R`. The function `source()` enables to use them.
+
+```{r}
+source("R/custom_functions.R")
+```
+
+Individual-specific data are available as `ringing_data` (i.e., details on ringing dates and individual-specific covariates) and `resighting_data` (i.e., details on live encounters).
+
+```{r, message=FALSE}
+ringing_data <- as.data.frame(read_csv("data/ringing_data.csv")) 
+resighting_data <- as.data.frame(read_csv("data/resighting_data.csv")) %>% 
+  filter(Ring %in% ringing_data$Ring)
+```
+
+Additionally, we use North Atlantic oscillation (`NAO`) indices that are based on the principal component approach [\^8], retrieved from <https://climatedataguide.ucar.edu/climate-data/hurrell-north-atlantic-oscillation-nao-index-pc-based> (last changed 2021-08-28). As recording intervals cross years (May - April), NAO indices for the subsequent year need to be assigned: E.g., 2007 and DJFM 2008.
+
+Note, for each recording interval, DJFM values of the subsequent year are used (e.g., cohort 2007 = NAO in 2008). This is taken care of by defining years
+
+```{r}
+nao <- read.table("data/nao.txt", header = T) %>% 
+  mutate(time = as.factor(year - 1))
+```
+
+The two periods December-March (DJFM) and December-February (DJF) are strongly correlated, hence we use only the DJFM index as a proxy of climate conditions.
+
+```{r}
+cor.test(nao$DJFM, nao$DJF)
+```
+
+Additionally, to simplify the interpretation of NAO-effects, we queried weather data from local weather stations using the package `rdwd`:
+
+
+```{r}
+## climate data for a radius of 60 km around the study area
+## -----------------------------------------------------------------------------
+climate.data <- readRDS("data/climate.data.RDS")
+## assess raw data (station-specific records)
+## -----------------------------------------------------------------------------
+raw <- climate.data$raw
+table(raw$station)
+```
+
+Records of individuals are highly correlated as shown below. Hence, for downstream analyses climate data are averaged across station.
+
+```{r}
+## Expand data for correlation matrix
+## -----------------------------------------------------------------------------
+comb <- data.frame(station = rep(unique(raw$station), 3),
+                       var = rep(c("temp", "snow", "precip"), each = 8))
+
+## write data to a matrix to compute correlation coefficients
+## -----------------------------------------------------------------------------
+mat <- matrix(NA, nrow = 1698, ncol = nrow(comb))
+for (i in 1:nrow(comb)) { 
+  mat[,i] <- raw[[comb$var[i]]][raw$station == comb$station[i]] 
+}
+## Temperature: Average air temperature
+## -----------------------------------------------------------------------------
+(r <- cor(mat[,1:8], use = "complete")) 
+round(range(r[r < 1]),2)
+
+## Snow: Days with snow cover
+## -----------------------------------------------------------------------------
+(r <- cor(mat[,9:16], use = "complete")) 
+round(range(r[r < 1]),2)
+
+## Precipitation levels
+## -----------------------------------------------------------------------------
+(r <- cor(mat[,17:24], use = "complete")) 
+round(range(r[r < 1]),2)
+
+## Correlation with NAO
+## -----------------------------------------------------------------------------
+climate.data$season$time <- as.factor(climate.data$season$time)
+nao <- left_join(nao, climate.data$season, by = "time")
+with(filter(nao, year > 2007), cor(DJFM, snow))
+with(filter(nao, year > 2007), cor(DJFM, temp))
+with(filter(nao, year > 2007), cor(DJFM, precip))
+```
+
+
+This analysis is based on data from a long-term study on common buzzards *Buteo buteo* comprising individuals that were ringed as nestling and individually marked with wing-tags in the period 2007 to 2020 Note, due to logistic constraints there is no information on *Leucocytozoon* infections available for the cohort of 2008 and thus individuals from that cohort are omitted from analyses.
+
+## Modelling of survival probabilities
+### Capture-Mark-Resighting analysis 
+
+We model survival probabilities using combined dead and live encounter events using the `Barker` model implemented in software `MARK`. This model does not allow missing covariates and hence we need to subset the dataset first (i.e., removing the cohort of 2008 where no data on *Leucocytozoon* infection status is available):
+
+```{r}
+## Subset to wing-tagged birds with complete covariates
+## ----------------------------------------------------
+ringing_data <- filter(
+  ringing_data,
+  # Subset to wing-tagged only
+  Tag ==  1, 
+  # Remove birds that died in the nest
+  !CauseDeath %in% "Dead as chick",
+  # Remove two birds predated as nestling
+  !Ring %in% c("3408543", "3417787"),
+  # known Sex
+  !is.na(Sex),
+  # No missing covariate 
+  !is.na(Lprev),
+  # Keep birds with assigned morph
+  Morph %in% 2:4) %>% 
+  #mutate(Rank = case_when(Rank == "1" ~ "A", Rank != "1" ~ "B")) %>% 
+  mutate(Lbinom = as.factor(ifelse(Lprev == 0, "Uninfected", "Infected"))) %>% 
+  ## scale continuous variables
+  mutate(Hatch = scale(Hatch)) %>% 
+  mutate(Age_days = scale(Age_days)) %>% 
+  mutate(BCI = scale(BCI))
+```
+
+At this stage, we retain a total of `r nrow(ringing_data)` individuals, corresponding to a mean cohort size of `r mean(table(ringing_data$Year))` [Range: `r min(table(ringing_data$Year))` - `r max(table(ringing_data$Year))`].
+
+Based on ringing data and re-sightings of individuals, we assemble combined live-dead encounter histories for all individuals using the custom function `create.ld.barker`. This functions generates a vector of the form `LDLDLD`, where `L` codes captures (here, only the marking occasion) and `D` codes both dead recoveries (D = 1) and live re-sightings (D = 2) between sampling intervals. Together, each `LD` pair codes for one interval of the study period. Next, we define the model structure for the `Barker` model and code the required design data.
+
+```{r, eval=FALSE}
+## NOT run, output is saved
+## Code capture histories (ch) and reformat data
+## ------------------------------------------------------
+df.barker <- data.frame(
+  ringing_data,
+  ch =  create.ld.barker(
+    start = 2007,
+    end = 2020, 
+    ringing_data = ringing_data,
+    resights = resighting_data)) %>% 
+  mutate(ch = as.character(ch)) %>% 
+  mutate(Morph = factor(Morph, labels = c("D","I","L"))) %>% 
+  mutate(Sex = as.factor(Sex)) %>%
+  subset(., select = -c(Ring, Tag, Dead, DateDeath, CauseDeath)) 
+
+## process the data for RMark
+## ------------------------------------------------------
+dp.barker  <- process.data(data = df.barker, model = "Barker", begin.time = 2007,
+                        groups = c("Sex", "Morph", "Lbinom"))
+
+## create design data
+## ------------------------------------------------------
+ddl.barker <- make.design.data(dp.barker) 
+
+## Bin age-classes
+## Survival S:
+## ------------------------------------------------------ 
+ddl.barker <- add.design.data(
+  data = dp.barker, ddl = ddl.barker, parameter="S", type = "age",
+  name = "age", bins = c(0, 1, 2, 13),
+  right = FALSE, replace = TRUE)
+
+ddl.barker$S$y1 <- 0
+ddl.barker$S$y1[ddl.barker$S$age == "[0,1)"] <- 1
+covars <- left_join(data.frame(time = ddl.barker$S$time), nao, "time")
+ddl.barker$S$NAO <- covars$DJFM
+
+## Further parameters
+## -----------------------------------------------------------------------------
+ddl.barker <- add.design.data(
+  data = dp.barker, ddl = ddl.barker, parameter="R", type = "age",
+  name = "age", bins = c(0, 1, 2, 13),
+  right = FALSE, replace = TRUE)
+
+ddl.barker <- add.design.data(
+  data = dp.barker, ddl = ddl.barker, parameter="r", type = "age",
+  name = "age", bins = c(0, 1, 2, 13),
+  right = FALSE, replace = TRUE)
+
+ddl.barker <- add.design.data(
+  data = dp.barker, ddl = ddl.barker, parameter="RPrime", type = "age",
+  name = "age", bins = c(0, 1, 2, 13),
+  right = FALSE, replace = TRUE)
+
+ddl.barker$r <- ddl.barker$r %>% 
+  mutate(ageclass2 = case_when(
+    age == "[0,1)" ~ "Juvenile",
+    age != "[0,1)" ~ "Adult"
+  ))
+
+ddl.barker$R <- ddl.barker$R %>% 
+  mutate(ageclass2 = case_when(
+    age == "[0,1)" ~ "Juvenile",
+    age != "[0,1)" ~ "Adult"
+  ))
+
+ddl.barker$RPrime <- ddl.barker$RPrime %>% 
+  mutate(ageclass2 = case_when(
+    age == "[0,1)" ~ "Juvenile",
+    age != "[0,1)" ~ "Adult"
+  ))
+
+## Save files for later use 
+## -----------------------------------------------------------------------------
+saveRDS(df.barker, file = "data/df.barker.RDS", compress = "bzip2")
+saveRDS(dp.barker, file = "data/dp.barker.RDS", compress = "bzip2")
+saveRDS(ddl.barker, file = "data/ddl.barker.RDS", compress = "bzip2")
+```
+
+Load data previously aggregated using the above code
+
+```{r}
+df.barker <- readRDS("data/df.barker.RDS")
+dp.barker <- readRDS("data/dp.barker.RDS")
+ddl.barker <- readRDS("data/ddl.barker.RDS")
+```
+
+#### Estimating c-hat based on bootstrapping
+
+The following code allows to estimate $\hat{C}$ based on parametric bootstrapping. For this purpose, first a general model structure is fitted to obtain model estimates. These estimates are then used to simulate capture histories that are re-analysed using the same model. *Because of considerable computation time, the output is saved within the repository and loaded later on. Also, as indicated above it is required to have programm MARK installed on the computer when repeating the calculations*.
+
+```{r, eval = F, message=FALSE, warning=FALSE}
+## Run global model to estimate parameters based on the raw data
+## -----------------------------------------------------------------------------
+global.model <- mark(
+  dp.barker,  ddl.barker, silent = FALSE, output = FALSE, invisible = TRUE,
+  model.parameters = list(
+    S = list(formula = ~ age + time + Sex, 
+             fixed = list(time = 2008, value = 1)), 
+    p = list(formula = ~ 1, fixed = 0),
+    F = list(formula = ~ 1, fixed = 1),
+    FPrime = list(formula = ~ 1, fixed = 0),
+    R = list(formula = ~ time + Sex, fixed = list(time = 2008, value = 0)),
+    RPrime = list(formula = ~ ageclass2 + Sex),
+    r = list(formula = ~ ageclass2 + Sex, fixed = list(cohort = 2008, value = 0))),
+  model = 'Barker')
+## clean up unused files
+## -----------------------------------------------------------------------------
+cleanup(ask = FALSE)
+
+## Extract estimated parameters
+## --------------------------------------------------------
+params <- lapply(row.names(global.model$results$real), function(x) {
+  stringr::str_split(x, pattern = " ")[[1]]
+}) %>% 
+  do.call("rbind",.) %>% 
+  as.data.frame() %>% 
+  set_colnames(c("Parameter", "Group", "Cohort", "age", "time")) %>% 
+  mutate(time = substr(time, 2, nchar(time)) %>% as.numeric()) %>% 
+  mutate(age = substr(age, 2, nchar(age)) %>% as.numeric()) %>% 
+  cbind(., global.model$results$real) 
+
+
+## Split by parameter (S, r, p & F) and group (Female, Male)
+## --------------------------------------------------------
+
+## Survival:
+## --------------------------------------------------------
+S.f <- filter(params, Group == "gFemaleDInfected", Parameter == "S") 
+S.m <- filter(params, Group == "gMaleDInfected", Parameter == "S")
+
+## Recovery probability
+## --------------------------------------------------------
+r.f <- filter(params, Group == "gFemaleDInfected", Parameter == "r")
+r.m <- filter(params, Group == "gMaleDInfected", Parameter == "r")
+
+## Re-sighting probability. --> time 2008 set to zero 
+## --------------------------------------------------------
+R.f <- filter(params, Group == "gFemaleDInfected",  Parameter == "R")
+R.f.2008 <- R.f[1,]; R.f.2008$time <- 2008; R.f.2008$age <- 1; R.f.2008$estimate <- 0
+R.f <-rbind(R.f, R.f.2008)
+RPrime.f <- filter(params, Group == "gFemaleDInfected", Parameter == "R'")
+
+R.m <- filter(params, Group == "gMaleDInfected",  Parameter == "R")
+R.m.2008 <- R.m[1,]; R.m.2008$time <- 2008; R.m.2008$age <- 1; R.m.2008$estimate <- 0
+R.m <-rbind(R.m, R.m.2008)
+
+RPrime.m <- filter(params, Group == "gMaleDInfected", Parameter == "R'")
+
+## get group table to assign parameters correctly in the bs model
+## --------------------------------------------------------
+(group.table <- filter(dp.barker$data[,c("group", "Sex", "Morph", "Lbinom")]) %>% 
+  unique.data.frame() %>% 
+  .[with(., order(Sex, Morph, Lbinom)),])
+
+
+## conduct simulations using parametric bs for both models
+## -----------------------------------------------------------------------------
+sim.out <- sims.barker(
+  S.fem = S.f, S.mal = S.m, R.fem = R.f, R.mal = R.m,
+  RPrime.fem = RPrime.f, RPrime.mal = RPrime.m, r.mal = r.m, r.fem = r.f,
+  marked =  Marked(
+    data = dp.barker$data, n.occasions = nchar(dp.barker$data$ch[1])/2,
+    groups = group.table$group, group.col = "group"),
+  reps = 999, 
+  model.parameters = list(
+    S = list(formula = ~ age + time + Sex, 
+             fixed = list(cohort = 2008, value = 1)), 
+    p = list(formula = ~ 1, fixed = 0),
+    F = list(formula = ~ 1, fixed = 1),
+    FPrime = list(formula = ~ 1, fixed = 0),
+    R = list(formula = ~ time + Sex, fixed = list(time = 2008, value = 0)),
+    RPrime = list(formula = ~ ageclass2 + Sex),
+    r = list(formula = ~ ageclass2 + Sex, fixed = list(cohort = 2008, value = 0))))
+  
+## Save output for later use
+## -----------------------------------------------------------------------------
+  save(sim.out, file = "data/sim.out.barker.RData")
+  c.hat <- list(median = global.model$results$deviance/sim.out$deviance.median,
+                lcl = global.model$results$deviance/sim.out$deviance.025,
+                ucl = global.model$results$deviance/sim.out$deviance.975)
+  save(c.hat, file = "data/c.hat.barker.RData")
+  cleanup(ask = FALSE)
+```
+
+Inspect results of the bootstrapping exercise:
+
+```{r}
+## Load data generated using the code chunk above
+## -----------------------------------------------------------------------------
+load("data/sim.out.barker.RData")
+load("data/c.hat.barker.RData")
+
+## Create Figure S1, showing distribution and median estimate of c-hat
+## -----------------------------------------------------------------------------
+Fig_S1 <- ggplot(data.frame(x = (c.hat$median*sim.out$deviance.median)/sim.out$deviance.raw), aes(x)) +
+  geom_histogram(bins = 30, col = "black", fill = "white") +
+  theme_article() +
+  xlab(TeX("Estimated $\\hat{C}")) +
+  ylab("Frequency") +
+  annotate("text", x = -Inf, y = Inf, hjust = -0.2, vjust = 1.5, 
+           label = TeX(paste0("$\\hat{C} = ", round(c.hat$median,2)),
+                       output = 'character'),parse = T) +
+  annotate("text", x = -Inf, y = Inf, hjust = -0.12, vjust = 4, 
+           label = paste("CI:", round(c.hat$ucl,2), "-", round(c.hat$lcl,2)))
+Fig_S1
+```
+
+```{r, echo=FALSE, eval=FALSE}
+## Save file to disk
+## -----------------------------------------------------------------------------
+ggsave(plot = Fig_S1, filename =  "plots/Fig_S1.pdf", 
+        device = "pdf", dpi = 1200, width = 6, height = 4, units = "in")
+ggsave(plot = Fig_S1, filename = "plots/Fig_S1.png", 
+        device = "png", dpi = 1200, width = 6, height = 4, units = "in")
+```
+
+#### Candidate models
+
+Build all combinations of model formulas and fit candidate models. To adjust for overdispersion, the estimated $\hat{C}$ is used. *Running all models takes time and hence we also provide the output files*. 
+
+```{r, eval=FALSE}
+do_analysis.barker = function(dp.barker, ddl.barker) {
+  ## Models for Survival S
+  ## ---------------------------------------------------------------------------
+  
+  ## Null model: Only age-specifc survival rates
+  ## ---------------------------------------------------------------------------
+  S.01 = list(formula = ~ age, fixed = list(cohort = 2008, value = 1))
+  
+  ## Simple time and climate-dependent models
+  ## ---------------------------------------------------------------------------
+  S.02 = list(formula = ~ age + time, fixed = list(cohort = 2008, value = 1))
+  S.03 = list(formula = ~ age + NAO, fixed = list(cohort = 2008, value = 1))
+  S.04 = list(formula = ~ age * NAO, fixed = list(cohort = 2008, value = 1))
+  S.05 = list(formula = ~ age + NAO + time, fixed = list(cohort = 2008, value = 1))
+  S.06 = list(formula = ~ age * NAO + time, fixed = list(cohort = 2008, value = 1))
+
+  ## Adding sex-specific rates
+  ## ---------------------------------------------------------------------------
+  S.07 = list(formula = ~ age + Sex, fixed = list(cohort = 2008, value = 1))
+  S.08 = list(formula = ~ age + time + Sex, fixed = list(cohort = 2008, value = 1))
+  S.09 = list(formula = ~ age + NAO + Sex, fixed = list(cohort = 2008, value = 1))
+  S.10 = list(formula = ~ age * NAO + Sex, fixed = list(cohort = 2008, value = 1))
+  S.11 = list(formula = ~ age + NAO + time + Sex, fixed = list(cohort = 2008, value = 1))
+  S.12 = list(formula = ~ age * NAO + time + Sex, fixed = list(cohort = 2008, value = 1))
+
+  ## Adding Morphs
+  ## ---------------------------------------------------------------------------
+  S.13 = list(formula = ~ age + Morph, fixed = list(cohort = 2008, value = 1))
+  S.14 = list(formula = ~ age + time + Morph, fixed = list(cohort = 2008, value = 1))
+  S.15 = list(formula = ~ age + NAO + Morph, fixed = list(cohort = 2008, value = 1))
+  S.16 = list(formula = ~ age * NAO + Morph, fixed = list(cohort = 2008, value = 1))
+  S.17 = list(formula = ~ age + NAO + time + Morph, fixed = list(cohort = 2008, value = 1))
+  S.18 = list(formula = ~ age * NAO + time + Morph, fixed = list(cohort = 2008, value = 1))
+
+  ## Adding Leucocytozoon prevalence, main effect and interaction terms
+  ## ---------------------------------------------------------------------------
+  S.19 = list(formula = ~ age + Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.20 = list(formula = ~ age + time + Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.21 = list(formula = ~ age + NAO + Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.22 = list(formula = ~ age * NAO + Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.23 = list(formula = ~ age + NAO + time + Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.24 = list(formula = ~ age * NAO + time + Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.25 = list(formula = ~ age + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.26 = list(formula = ~ age + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.27 = list(formula = ~ age + NAO + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.28 = list(formula = ~ age * NAO + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.29 = list(formula = ~ age + NAO + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.30 = list(formula = ~ age * NAO + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.31 = list(formula = ~ age + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.32 = list(formula = ~ age + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.33 = list(formula = ~ age + NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.34 = list(formula = ~ age * NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.35 = list(formula = ~ age + NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  S.36 = list(formula = ~ age * NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  
+  ## Adding Body condition, main effect and interaction terms
+  ## ---------------------------------------------------------------------------
+  S.37 = list(formula = ~ age + BCI, fixed = list(cohort = 2008, value = 1))
+  S.38 = list(formula = ~ age * BCI, fixed = list(cohort = 2008, value = 1))
+  S.39 = list(formula = ~ age + time + BCI, fixed = list(cohort = 2008, value = 1))
+  S.40 = list(formula = ~ age * BCI + time, fixed = list(cohort = 2008, value = 1))
+  S.41 = list(formula = ~ age + NAO + BCI, fixed = list(cohort = 2008, value = 1))
+  S.42 = list(formula = ~ age * BCI + NAO, fixed = list(cohort = 2008, value = 1))
+  S.43 = list(formula = ~ age + NAO + time + BCI, fixed = list(cohort = 2008, value = 1))
+  S.44 = list(formula = ~ age * BCI + time + NAO, fixed = list(cohort = 2008, value = 1))
+  S.45 = list(formula = ~ age + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  S.46 = list(formula = ~ age + time + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  S.47 = list(formula = ~ age + NAO + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  S.48 = list(formula = ~ age + NAO + time + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  S.49 = list(formula = ~ age * NAO + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  S.50 = list(formula = ~ age * NAO + time + y1:BCI, fixed = list(cohort = 2008, value = 1))
+  
+  ## Adding brood rank
+  ## ---------------------------------------------------------------------------
+  S.51 = list(formula = ~ age + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  S.52 = list(formula = ~ age + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  S.53 = list(formula = ~ age + NAO + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  S.54 = list(formula = ~ age * NAO + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  S.55 = list(formula = ~ age + NAO + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  S.56 = list(formula = ~ age * NAO + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
+  
+  ## Adding Hatching date to account for seasonsal effects on juvenile survival 
+  ## ---------------------------------------------------------------------------
+  S.57 = list(formula = ~ age + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  S.58 = list(formula = ~ age + time + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  S.59 = list(formula = ~ age + NAO + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  S.60 = list(formula = ~ age * NAO + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  S.61 = list(formula = ~ age + NAO + time + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  S.62 = list(formula = ~ age * NAO + time + y1:Hatch, fixed = list(cohort = 2008, value = 1))
+  
+  ## Adding age at sampling date, restricted to juvenile survival rates
+  ## ---------------------------------------------------------------------------
+  S.63 = list(formula = ~ age + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  S.64 = list(formula = ~ age + time + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  S.65 = list(formula = ~ age + NAO + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  S.66 = list(formula = ~ age * NAO + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  S.67 = list(formula = ~ age + NAO + time + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+  S.68 = list(formula = ~ age * NAO + time + y1:Age_days, fixed = list(cohort = 2008, value = 1))
+
+  ## Models for re-sighting probability p
+  ## p.time.age: Not supported
+  ## ---------------------------------------------------------------------------
+  p.dot = list(formula = ~ 1, fixed = 0)
+  
+  ## Models for Site fidelity F
+  ## ---------------------------------------------------------------------------
+  F.fixed = list(formula = ~ 1, fixed = 1)
+  FPrime.fixed = list(formula = ~ 1, fixed = 0)
+
+  ## Models for dead recovery chances r
+  ## ---------------------------------------------------------------------------
+  r.dot = list(formula = ~ 1, fixed = list(cohort = 2008, value = 0))
+  r.age2 = list(formula = ~ ageclass2, fixed = list(cohort = 2008, value = 0))
+
+  R.dot =  list(formula = ~ 1)
+  R.time =  list(formula = ~ time, fixed = list(time = 2008, value = 0))
+
+  RPrime.time =  list(formula = ~ time, fixed = list(time = 2008, value = 0))
+  RPrime.dot =  list(formula = ~ 1)
+  
+  ## Compile model list based on parameter combinations
+  ## ---------------------------------------------------------------------------
+  cml = create.model.list(model = "Barker")
+  
+  ## Run models 
+  ## ---------------------------------------------------------------------------
+  results.barker = mark.wrapper.parallel(
+    model.list = cml, data = dp.barker, ddl = ddl.barker,
+    output = FALSE, silent = FALSE, cpus = 2, parallel = TRUE)
+  return(results.barker)
+}
+
+## Conduct analysis using function specified above
+## ---------------------------------------------------------------------------
+models.barker <- do_analysis.barker(dp.barker =  dp.barker, ddl.barker = ddl.barker)
+
+## adjust for over dispersion using c-hat and save output as a file
+## ---------------------------------------------------------------------------
+load("data/c.hat.barker.RData")
+models.barker.adj <-  adjust.chat(model.list = models.barker, chat = c.hat$median) 
+
+## For upload on GitHub (file size limit exceeded) split in two 
+## output datafiles:
+## -----------------------------------------------------------------------------
+models.barker.adj_1 <- RMark::remove.mark(models.barker.adj, model.numbers = 273:544)
+models.barker.adj_2 <- RMark::remove.mark(models.barker.adj, model.numbers = 1:272)
+saveRDS(models.barker.adj_1, file = "data/models.barker.adj_1.RDS", compress = 'bzip2')
+saveRDS(models.barker.adj_2, file = "data/models.barker.adj_2.RDS", compress = 'bzip2')
+
+## Identify supported models based on Delta QAICc <= 7
+## ---------------------------------------------------------------------------
+Large.AICc <- 
+  rownames(models.barker.adj$model.table)[which(models.barker.adj$model.table[["DeltaQAICc"]] > 7)] %>% 
+  as.numeric()
+
+## Select supported models and write output to file 
+## -----------------------------------------------------------------------------
+supported.models.barker <- remove.mark(
+  marklist = models.barker.adj,
+  model.numbers = Large.AICc)
+saveRDS(supported.models.barker, file = "data/supported.models.barker.RDS")
+
+## Cleanup debris (=unused temporary files)
+## -----------------------------------------------------------------------------
+cleanup(ask = FALSE)
+unlink(list.files(pattern = "mark", ignore.case = F))
+```
+
+#### Results
+
+Load output summarising candidate models
+
+```{r}
+## Load models with adjusted deviance: Two files to merge
+## -----------------------------------------------------------------------------
+models.barker.adj_1 <- readRDS("data/models.barker.adj_1.RDS")
+models.barker.adj_2 <- readRDS("data/models.barker.adj_2.RDS")
+## Merge mark lists
+## -----------------------------------------------------------------------------
+models.barker.adj <- RMark::merge.mark(models.barker.adj_1, models.barker.adj_2)
+rm(list = c("models.barker.adj_1", "models.barker.adj_2"))
+
+## Load Supported models
+## -----------------------------------------------------------------------------
+supported.models.barker <- readRDS("data/supported.models.barker.RDS")
+```
+
+```{r, eval=FALSE, echo=FALSE}
+## tabulise models
+models <- data.frame(model.number = 1:(length(models.barker.adj) - 1),
+                     model = sapply(models.barker.adj[1:528], function(x) x[["model.name"]]))
+
+View(supported.models.barker$model.table)
+```
+
+
+##### Model averaging
+
+A few models are not fully estimatable due to boundary estimates. These models represent the most complicated model structure including age, time, NAO and an additional covariate (BCI or *Leucocytozoon* prevalence). These models are not considered in computing model averages of parameter S.
+
+* `r supported.models.barker$model.184$model.name`
+* `r supported.models.barker$model.239$model.name`
+
+```{r}
+## Compute model averaged estimates
+## -----------------------------------------------------------------------------
+S.mod.avg <- model.average(supported.models.barker,
+                           parameter = "S", drop = T, vcv = T)[["estimates"]] %>%
+  ## estimates 2-13 are identical, but age == 3 needed for 2010!
+  filter(fixed != "Fixed", age %in% 0:3) %>% 
+  subset(., select = c(estimate, se, lcl, ucl, age, Sex, Morph, Lbinom)) %>% 
+  unique.data.frame()
+
+## Model average recovery estimates (r)
+## -----------------------------------------------------------------------------
+r.mod.avg <- model.average(supported.models.barker,
+                           parameter = "r", drop = T, vcv = T)[["estimates"]] %>% 
+  filter(fixed != "Fixed") %>% 
+  subset(., select = (c(estimate, se, lcl, ucl, age, Sex))) %>% 
+  unique.data.frame()
+
+## Model average R estimate
+## -----------------------------------------------------------------------------
+R.mod.avg <- model.average(supported.models.barker,
+                           parameter = "R", drop = T, vcv = T)[["estimates"]] %>% 
+  filter(fixed != "Fixed") %>% 
+  subset(., select = (c(estimate, se, lcl, ucl, age, Sex))) %>% 
+  unique.data.frame()
+
+## Model average R' estimate
+## -----------------------------------------------------------------------------
+RPrime.mod.avg <- model.average(supported.models.barker,
+                           parameter = "RPrime", drop = T, vcv = T)[["estimates"]] %>% 
+  filter(fixed != "Fixed") %>% 
+  subset(., select = (c(estimate, se, lcl, ucl, age, Sex))) %>% 
+  unique.data.frame()
+```
+
+
+##### Model selection
+
+Create a model selection table (Table S1)
+
+```{r, eval=FALSE}
+## Format model table
+## -----------------------------------------------------------------------------
+model.table <- 
+  models.barker.adj$model.table[,c("model", "DeltaQAICc", "weight", "npar", "QDeviance")] 
+
+## Change parameter names to enhance readability 
+## -----------------------------------------------------------------------------
+model.table$model <- 
+  stringr::str_replace_all(model.table$model, "~", "")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Lbinom", "Leucocytozoon")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Hatch", "Hatch date")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Age_days", "Nestling")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "BCI", "Body condition")
+model.table$model <-
+  stringr::str_replace(model.table$model, "ageclass2", "Ageclass2")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "age", "AgeClass3")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "Nestling", "Nestling age")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "y1", "Juvenile")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "time", "Time")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "p(1)", "p(0)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "F(1)", "F(1)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "F'(1)", "F'(0)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "R'(1)", "R'(.)")
+model.table$model <- 
+  stringr::str_replace(model.table$model, "r(1)", "r(.)")
+
+readr::write_csv(model.table, "data/adjusted.models.barker.csv")
+```
+
+##### Parameter weights
+
+Compute cumulative weights based on all models including a certain parameter.
+
+```{r}
+## Variable importance parameter S
+## -----------------------------------------------------------------------------
+vars <- c("time", "BCI", "NAO", "Sex", "Rank", "Hatch", "Lbinom", "y1:Age_days", "Morph", "y1:BCI")
+
+S.weights <- sapply(vars, function(var) {
+  t <- filter(models.barker.adj$model.table, stringr::str_detect(S, var))
+  sum(t$weight) %>% round(.,3)
+})
+data.frame(Parameter = vars, weight = S.weights)
+  
+## variable importance parameter r
+## -----------------------------------------------------------------------------
+vars <- c("1", "ageclass2")
+
+r.weights <- sapply(vars, function(var) {
+  t <- filter(models.barker.adj$model.table, stringr::str_detect(r, var))
+  sum(t$weight) %>% round(.,3)
+})
+data.frame(Parameter = vars, weight = r.weights)
+
+## variable importance parameter R
+## -----------------------------------------------------------------------------
+vars <- c("1", "time")
+
+R.weights <- sapply(vars, function(var) {
+  t <- filter(models.barker.adj$model.table, stringr::str_detect(R, var))
+  sum(t$weight) %>% round(.,3)
+})
+data.frame(Parameter = vars, weight = R.weights)
+
+## variable importance parameter R'
+## -----------------------------------------------------------------------------
+vars <- c("1", "time")
+
+RPrime.weights <- sapply(vars, function(var) {
+  t <- filter(models.barker.adj$model.table, stringr::str_detect(RPrime, var))
+  sum(t$weight) %>% round(.,3)
+})
+data.frame(Parameter = vars, weight = RPrime.weights)
+```
+
+
+##### Survival rates (S)
+
+Explore surival rates in relation to fixed effects.
+
+##### Age
+
+Visualise age and time-specific survival estimates. **Note: Except for age and time no other factor plays a role for the survival estimates (e.g., Morph, Rank, infection status)** Hence, rounding estimates at a precision of six digits allows to simplify the output in such a way that there is a single unique estimate per year and age combination.
+
+```{r, message=FALSE, warning=FALSE}
+## Format and simplify 
+## -----------------------------------------------------------------------------
+df.S.age <- lapply(rownames(S.mod.avg), function(row) {
+  x <- stringr::str_split(row, " ")[[1]]
+  data.frame(parameter = x[1],
+             cohort = substr(x[3], 2, nchar(x[3])),
+             year = as.numeric(substr(x[5], 2, nchar(x[5]))))
+}) %>% 
+  do.call("rbind",.) %>% 
+  cbind(S.mod.avg) %>% 
+  mutate(ageclass = case_when(
+    age == 0 ~ 'Juvenile',
+    age == 1 ~ 'Subadult',
+    age %in% 2:13 ~ 'Adult'  
+  )) %>% 
+  mutate(ageclass = factor(ageclass, levels = c("Juvenile", "Subadult", "Adult"))) %>% 
+  ## round mean, se and CI values at fifth decimal to remove redundant values
+  subset(., select = c(year, estimate, se, lcl, ucl, ageclass)) %>% 
+  mutate(estimate = round(estimate, 6)) %>% 
+  mutate(se = round(se, 6)) %>% 
+  mutate(lcl = round(lcl, 6)) %>% 
+  mutate(ucl = round(ucl, 6)) %>% 
+  unique.data.frame()
+
+## Estimate means for age-classes
+## ---------------------------------------------------------------
+df.annotation <- df.S.age %>% 
+  group_by(ageclass) %>%
+  summarise(
+    Median = median(estimate),
+    mean  = mean(estimate),
+    Min = min(estimate),
+    Max = max(estimate),
+    N = length(estimate),
+    SD = stats::sd(estimate)) %>% 
+  mutate(SE = SD/sqrt(N))
+
+## Create plot of age-specific survival rates 
+## -----------------------------------------------------------------------------
+p.age <- 
+    ggplot(df.S.age,
+           aes(x = year, y = estimate)) +
+    geom_errorbar(aes(ymin = lcl, ymax = ucl) ,
+                colour = "grey80", size = 1, width = 0) +
+    geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se) ,
+                colour = "black", size = 1.2, width = 0) +
+    geom_line() +
+    geom_point(color = "black", fill = "Orange", size = 1.75, shape = 21) +
+    theme_article() +
+    theme(
+      # panel.grid.major.y = element_line(colour = "grey90", size = 0.5),
+      # panel.grid.minor.y = element_line(colour = "grey90", size = 0.5),
+      axis.line = element_line(size = .7, color = "black"),
+      legend.background = element_rect(fill = NA, colour = NA),
+      legend.margin = margin(c(1,1,1,1)),
+      legend.direction = "horizontal",
+      legend.position = "none",
+      legend.justification = c(1,1),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_color_brewer(palette = "Set1",
+                       name = "") +
+    scale_y_continuous(breaks = seq(0, 1, .2), limits = c(0, 1)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+    xlab("") +
+    ylab("Annual survival probability") +
+    facet_wrap(~ageclass, ncol = 1, strip.position = "left") +
+    geom_text(data = df.annotation, x = 2007, y = -Inf,
+      hjust   = 0, vjust   = -0.8, col = "Black", size = 3,
+      aes(label = paste0("mean: ",round(mean,2))))
+p.age
+```
+
+Mean estimates for age and sex combinations over time:
+
+```{r, warning=FALSE, results='markup'}
+## Age-specific means
+## -----------------------------------------------------------------------------
+df.S.age %>% 
+  group_by(ageclass) %>% 
+  summarise(Mean = round(mean(estimate),2),
+            Mean.SE = round(sd(estimate)/sqrt(length(estimate)),2),
+            Min = round(min(estimate), 2),
+            Max = round(max(estimate), 2),
+            .groups = "keep") %>% 
+  as.data.frame()
+```
+
+
+##### NAO
+
+Visualise correlation between survival and climate indices (NAO, as used in the models and Snow cover as further descriptive measure)
+
+```{r}
+## Join survival rates and climate data based on sampling year
+## -----------------------------------------------------------------------------
+df <- data.frame(year = as.numeric(as.character(nao$time)), NAO = nao$DJFM, SNOW = nao$snow) %>%
+  filter(., year > 2006) %>% 
+  left_join(., df.S.age)
+
+## Create Figure S2
+## -----------------------------------------------------------------------------
+Fig_S2 <- ggplot(df, aes(x = NAO, y = estimate, group = ageclass)) +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se) ,
+                colour = "black", size = 1.2, width = 0) +
+  geom_point(color = "black", fill = "Orange", size = 1.75, shape = 21) +
+  geom_smooth(method = "lm", se = T, formula = "y ~ x") +
+  theme_article() +
+  facet_wrap(~ageclass) +
+  xlab("NAO") +
+  ylab("Survival probability") +
+  scale_y_continuous(breaks = seq(0, 1, .2), limits = c(0, 1)) 
+```
+
+```{r, echo=FALSE, eval=FALSE}
+ggsave(plot = Fig_S2, filename = "plots/Fig_S2.pdf",
+       device = "pdf", dpi = 1200, width = 6, height = 4, units = "in")
+ggsave(plot = Fig_S2, filename = "plots/Fig_S2.png",
+       device = "png", dpi = 1200, width = 6, height = 4, units = "in")
+```  
+
+Compute pearson correlation coefficients for each age class
+
+```{r}
+## Juveniles
+## -----------------------------------------------------------------------------
+cor.test(df$estimate[df$ageclass == "Juvenile"],
+         df$NAO[df$ageclass == "Juvenile"],
+         method = "pearson")
+
+## Subadults
+## -----------------------------------------------------------------------------
+cor.test(df$estimate[df$ageclass == "Subadult"],
+         df$NAO[df$ageclass == "Subadult"],
+         method = "pearson")
+
+## Adults
+## -----------------------------------------------------------------------------
+cor.test(df$estimate[df$ageclass == "Adult"],
+         df$NAO[df$ageclass == "Adult"],
+         method = "pearson")
+```
+
+Create Figure 1:
+
+```{r}
+nao$sign <- ifelse(nao$DJFM > 0, "+", "-")
+p.nao <- 
+    ggplot(filter(nao, year > 2007),
+           aes(x = year - 1, y = DJFM, col = sign)) +
+    geom_line(col = "black") +
+    geom_point(size = 1.75) +
+    theme_article() +
+    theme(
+      legend.position = "none",
+      axis.line = element_line(size = .7, color = "black"),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+    scale_color_brewer(palette = "Set1",direction = -1) +
+    geom_hline(yintercept = 0, lty = "dotted") +
+    xlab("Survival period") +
+    ylab("NAO")
+
+p.snow <- 
+  ggplot(filter(nao, year > 2007),
+         aes(x = year - 1, y = snow)) +
+  geom_line(col = "black") +
+  geom_point(size = 1.75) +
+  theme_article() +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA)) +
+  scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+  scale_color_brewer(palette = "Set1",direction = -1) +
+  xlab("Survival period") +
+  ylab("Snow")
+
+p.temp <- 
+  ggplot(filter(nao, year > 2007),
+         aes(x = year - 1, y = temp)) +
+  geom_line(col = "black") +
+  geom_point(size = 1.75) +
+  theme_article() +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(size = .7, color = "black"),
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA)) +
+  scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+  scale_color_brewer(palette = "Set1",direction = -1) +
+  xlab("Survival period") +
+  ylab("Mean emperature [°C]")
+
+Fig_1 <- (p.age + theme(axis.text.x = element_blank(),
+               axis.ticks.x = element_blank())) +  
+  (p.nao + theme(axis.text.x = element_blank(),
+                 axis.title.x = element_blank(),
+                 axis.ticks.x = element_blank())) +
+  p.snow +
+  plot_layout(ncol = 1, heights = c(4, 1,1)) +
+  plot_annotation(tag_levels = "A")
+Fig_1
+```
+
+```{r, eval=FALSE, echo=FALSE}
+ggsave(plot = Fig_1, filename = "plots/Fig_1.pdf", 
+        device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
+ggsave(plot = Fig_1, filename = "plots/Fig_1.png", 
+        device = "png", dpi = 1200, width = 6, height = 6, units = "in")
+```
+
+##### Body Condition
+
+Explore correlations between survival estimates and body condition indices:
+
+```{r message=FALSE, warning=FALSE}
+## Select parameter indices to compute real estimates, skip year 2008 as 
+## this cohort is missing
+## -----------------------------------------------------------------------------
+par.index <- filter(ddl.barker$S, time != "2008",
+                    Sex == "Female", age == "[0,1)", Morph == "D", Lbinom == "Uninfected")
+
+## Get the range of covariate values from the raw data
+## -----------------------------------------------------------------------------
+BCI.values = c(seq(from = min(dp.barker$data$BCI), to = max(dp.barker$data$BCI), length.out = 30), 0)
+
+## Compute real estimates 
+## -----------------------------------------------------------------------------
+BCI.reals <- covariate.predictions(
+  supported.models.barker, 
+  data = data.frame(
+    BCI = BCI.values), 
+  indices = par.index$par.index,
+  drop = T)[["estimates"]] %>% 
+  left_join(., par.index[,c("par.index", "age", "time")], by = "par.index")  
+
+## Create figure
+## -----------------------------------------------------------------------------
+p.BCI.time <- lapply(unique(BCI.reals$time), function(x) {
+  ggplot(filter(BCI.reals, time == x), aes(x = covdata, y = estimate, group = age)) +
+    geom_ribbon(aes(ymin = lcl, ymax = ucl), fill = "#9ecae1") +
+    geom_ribbon(aes(ymin = estimate - se, ymax = estimate + se), fill = "#3182bd") +
+    geom_line(size = 1) +
+    theme_article() +
+    theme(axis.line = element_line(size = .7, color = "black"),
+          axis.title = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          panel.background = element_rect(fill = NA),
+          panel.border = element_rect(fill = NA),
+          text = element_text(size = 10)) +
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(limits = c(0,1), expand = c(0,0)) +
+    labs(title = x)
+}) %>% 
+  set_names(., unique(BCI.reals$time))
+```
+
+The model averaged estimates above show that the relationship between estimates survival and body condition is parallel across years. For simplicity, estimates are derived from a time-independent model to average across years:
+
+```{r}
+## Compute real estimates from a time-invariant model
+## -----------------------------------------------------------------------------
+BCI.reals <- covariate.predictions(
+  models.barker.adj$model.249, 
+  data = data.frame(
+    BCI = BCI.values), 
+  indices = par.index$par.index,
+  drop = T)[["estimates"]] %>% 
+  left_join(., par.index[,c("par.index", "age", "time")], by = "par.index")  
+
+## predicted increase from lowest to highes score
+## -----------------------------------------------------------------------------
+range(BCI.reals$estimate)
+coef <- summary(lm(estimate ~ covdata, BCI.reals))
+coef$coefficients[2,2]
+
+## Create plot
+## -----------------------------------------------------------------------------
+p.BCI <- 
+    ggplot(BCI.reals, aes(x = covdata, y = estimate, group = age)) +
+    geom_ribbon(aes(ymin = lcl, ymax = ucl), fill = "#9ecae1") +
+    geom_ribbon(aes(ymin = estimate - se, ymax = estimate + se), fill = "#3182bd") +
+    geom_line(size = 1) +
+    theme_article() +
+    theme(axis.line = element_line(size = .7, color = "black"),
+          panel.background = element_rect(fill = NA),
+          panel.border = element_rect(fill = NA),
+          text = element_text(size = 10)) +
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(limits = c(0,1), expand = c(0,0)) +
+    geom_vline(xintercept = 0, lty = "dotted") +
+    geom_hline(yintercept = BCI.reals$estimate[BCI.reals$covdata == 0][1], lty = "dotted") +
+    xlab("Standardised Body condition index") +
+    ylab("Survival probability")
+
+## Assemble multipanel figure, Figure 2 in the paper
+## -----------------------------------------------------------------------------
+col1 <- (p.BCI.time$`2007`/p.BCI.time$`2009`/p.BCI.time$`2010`/p.BCI.time$`2011`/p.BCI.time$`2012`)
+col2 <- (p.BCI.time$`2013`/p.BCI.time$`2014`/p.BCI.time$`2015`/p.BCI.time$`2016`/p.BCI.time$`2017`)
+col3 <- (p.BCI.time$`2018` + p.BCI.time$`2019` + p.BCI.time$`2020`) /
+  p.BCI + plot_layout(widths = c(rep(1,3), 3), heights = c(rep(0.5, 1), 3)) 
+Fig_2 <- (col1 | col2 | col3) + plot_layout(widths = c(.85,0.85,3))
+Fig_2
+```
+
+```{r, eval=FALSE, echo=TRUE}
+ggsave(plot = Fig_2, filename =  "plots/Fig_2.pdf", 
+        device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
+ggsave(plot = Fig_2, filename = "plots/Fig_2.png", 
+        device = "png", dpi = 1200, width = 6, height = 6, units = "in")
+```
+
+##### Resighting rates (R)
+
+Explore re-sighitng rates:
+
+```{r, message=FALSE, warning=FALSE}
+## obtain estimates 
+## -----------------------------------------------------------------------------
+df.R <- lapply(rownames(R.mod.avg), function(row) {
+  x <- stringr::str_split(row, " ")[[1]]
+  data.frame(parameter = x[1],
+             cohort = substr(x[3], 2, nchar(x[3])),
+             year = as.numeric(substr(x[5], 2, nchar(x[5]))))
+}) %>% 
+  do.call("rbind",.) %>% 
+  cbind(R.mod.avg) %>% 
+  mutate(ageclass = case_when(
+    age == 0 ~ 'Y1',
+    age == 1 ~ 'Y2',
+    age == 2 ~ 'Y3',
+    age %in% 3:13 ~ 'Y4+' 
+  )) %>% 
+  filter(., cohort == 2007, Sex == "Female")
+
+## Linear regression of p on year
+## -----------------------------------------------------------------------------
+lm.mod <- lm(estimate ~ year, data = df.R) %>% 
+  summary()
+
+## range 
+## -----------------------------------------------------------------------------
+range(df.R$estimate)
+
+## mean across years
+## -----------------------------------------------------------------------------
+mean(df.R$estimate)
+
+## Create figure
+## -----------------------------------------------------------------------------
+p.res <- 
+  ggplot(filter(df.R, cohort == 2007), aes(x = year, y = estimate)) +
+  geom_smooth(method = "lm", se = T, level = .95) +
+  geom_errorbar(aes(ymin = lcl, ymax = ucl),
+                width = 0., size = 1, col = "grey50") +
+  geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se),
+                width = 0., size = 1.2) +
+  geom_point(size = 2, shape = 21, col = "black", fill = "orange") +
+  theme_article() +
+  theme(
+    axis.line = element_line(size = .7, color = "black"),
+    legend.position = "none",
+    panel.background = element_rect(fill = NA),
+    panel.border = element_rect(fill = NA)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3),
+                       expand = c(0,0),
+                       limits = c(2006.8, 2020.2)) +
+    xlab("") +
+    ylab("Live resighting rate (R)") +
+    scale_y_continuous(breaks = seq(0, 0.6, 0.1)) +   
+    annotate("text", x = 2007 , y = Inf, hjust = 0, vjust = 1.5,
+             label = paste0("adj. R²: ", round(lm.mod$adj.r.squared,3), 
+                            "\np < 0.001"))
+```
+
+##### Resigthting rates (R')
+
+Explore parameter R':
+
+```{r}
+## Only a single unique estimate
+## -----------------------------------------------------------------------------
+RPrime.mod.avg[,c("estimate", "se")] %>% 
+  unique.data.frame()
+```
+
+
+##### Recovery chances (r)
+
+Explore recovery chances:
+
+```{r, eval=T}
+##  simplify model output
+## -----------------------------------------------------------------------------
+df.r <- lapply(rownames(r.mod.avg), function(row) {
+  x <- stringr::str_split(row, " ")[[1]]
+  data.frame(parameter = x[1],
+             cohort = substr(x[3], 2, nchar(x[3])),
+             age = substr(x[4], 2, nchar(x[4])),
+             year = as.numeric(substr(x[5], 2, nchar(x[5]))))
+}) %>% 
+  do.call("rbind",.) %>% 
+  cbind(r.mod.avg) %>% 
+  subset(., select = c(estimate, se, lcl, ucl, age, Sex, cohort)) %>% 
+  filter(., Sex == "Female", age %in% 0:1) 
+df.r$age <- ifelse(df.r$age == "0", "Juvenile", "Adult") %>% 
+  factor(levels = c("Juvenile", "Adult"))
+
+## Create figure
+## -----------------------------------------------------------------------------
+p.recov <- ggplot(df.r,
+                   aes(x = age, y = estimate)) +
+    geom_errorbar(aes(ymin = lcl, ymax = ucl), width = 0, size = 1, col = "Grey") +
+    geom_errorbar(aes(ymin = estimate - se, ymax = estimate + se),
+                  width = 0, size = 2, col = "black") +
+    geom_point(size = 3, shape = 21, colour = "black", fill = "orange") +
+    theme_article() +
+    theme(
+      axis.line = element_line(size = .7, color = "black"),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_y_continuous(expand = c(0,0), breaks = seq(0, 0.2,0.01)) +
+    xlab("Age class") +
+    ylab("Dead recovery rate (r)")
+
+## Assemble plot, same as Figure 3 in the paper
+## -----------------------------------------------------------------------------
+Fig_3 <- p.res + p.recov + plot_annotation(tag_levels = "A")
+Fig_3
+```
+
+```{r, echo=FALSE, eval=FALSE}
+ggsave(plot = Fig_3, filename =  "plots/Fig_3.pdf",
+       device = "pdf", dpi = 1200, width = 6, height = 4, units = "in")
+ggsave(plot = Fig_3, filename = "plots/Fig_3.png",
+       device = "png", dpi = 1200, width = 6, height = 4, units = "in")
+```
+
+## Known-fates
+
+As additional analysis, we compared individuals which were known to have died 
+during the first year of life with individuals that were re-sighted at least 
+once after completing the first year of life. 
+
+
+```{r}
+## Load raw data and merge ranks 4 and 5 to a single category
+## -----------------------------------------------------------------------------
+ringing_data <- as.data.frame(read_csv("data/ringing_data.csv")) %>% 
+  mutate(Rank = factor(case_when(
+    Rank == 1 ~ "1",
+    Rank == 2 ~ "2",
+    Rank == 3 ~ "3",
+    Rank >= 4 ~ "4/5"))) 
+
+## Query re-sighting data to identify individuals that are known
+## to have survived at least until reaching subadulthood
+resighting_data <- as.data.frame(read_csv("data/resighting_data.csv")) %>% 
+  filter(Ring %in% ringing_data$Ring)
+
+## Identify individuals that did before reaching the second year of life
+## -----------------------------------------------------------------------------
+dead <-
+  filter(ringing_data,
+         Dead == 'Yes') %>% 
+  mutate(HatchingDate = as.Date(paste0(Year - 1, "-12-31")) + Hatch) %>% 
+  mutate(DaysSinceHatching = as.Date(DateDeath) - HatchingDate) %>% 
+  mutate(CauseDeath = case_when(
+    CauseDeath == "Car collision" ~ "Collision",
+    CauseDeath == "Train collision" ~ "Collision",
+    CauseDeath == "Trichomonias infection" ~ "Trichomoniasis",
+    TRUE ~ CauseDeath)) %>% 
+  filter(., DaysSinceHatching <= 365) 
+```
+
+A total of `r nrow(dead)` individuals were recovered as dead during the first 
+year of life. For `length(dead$CauseDeath[!is.na(dead$CauseDeath)])` (`r round(100* length(dead$CauseDeath[!is.na(dead$CauseDeath)])/nrow(dead),2)` %) of these birds a cause of death could be identified:
+
+```{r}
+## Format data of know deaths
+## -----------------------------------------------------------------------------
+dead[["CauseDeath"]][is.na(dead[["CauseDeath"]])] <- "Unknown"
+death_causes <- as.data.frame(table(dead$CauseDeath)) 
+death_causes[["label"]] <- paste0(death_causes[["Var1"]], "\n", "n=", death_causes[["Freq"]])
+death_causes[["label"]] <- factor(
+  death_causes[["label"]], 
+  levels = death_causes[["label"]][order(death_causes$Freq, decreasing = T)])
+
+## Create figure summarising causes of death
+## -----------------------------------------------------------------------------
+p.CauseDeath <- 
+ggplot(death_causes, aes(x = label, y = Freq/sum(Freq), fill = Var1)) +
+  geom_bar(stat = "identity", col = "Black") +
+  theme_article() +
+  theme(legend.position = "none", axis.title.y = element_blank()) +
+  ylab("Proportion of cases") +
+  # labs(subtitle = "Causes of death (n = 198)", tag = "A") +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_y_continuous(expand = c(0,0)) +
+  coord_flip() 
+
+## Plot time of death within first year as a histogram
+## -----------------------------------------------------------------------------
+p.TimeDeath <- 
+  ggplot(dead, aes(x = DaysSinceHatching, fill = CauseDeath)) +
+  geom_histogram(binwidth = 10, col = "Black") +
+  theme_article() +
+  theme(legend.position = "none") +
+  xlab("Days since hatching") +
+  ylab("Number of indivinduals") +
+  geom_segment(
+    data.frame(DaysSinceHatching = 46, CauseDeath = NA), mapping = aes(
+      x = DaysSinceHatching, xend = DaysSinceHatching,
+      y = 14.5, yend = 13.2), arrow = arrow(length = unit(0.35, "cm")),
+                                            size = 1, color = "blue") + 
+  # annotate("text", x = 47, y = Inf, vjust = 1.5, hjust = 0, label = "Mean fledging date") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_x_continuous(breaks = seq(0, 365, 30)) +
+  scale_fill_brewer(palette = "Dark2")
+
+## Create Supplementary figure S3
+## -----------------------------------------------------------------------------
+Fig_S3 <- p.CauseDeath + inset_element(p.TimeDeath, 0.25, 0.25, 1, 1) +
+    plot_annotation(tag_levels = 'A')
+Fig_S3
+```
+
+```{r, echo=FALSE, eval=FALSE}
+ggsave(plot = Fig_S3, filename = "plots/Fig_S3.pdf", 
+       device = "pdf", dpi = 1200, width = 9, height = 6, units = "in")
+ggsave(plot = Fig_S3, filename = "plots/Fig_S3.png", 
+       device = "png", dpi = 1200, width = 9, height = 6, units = "in")
+```
+
+
+### Binomal mixed model
+
+Compile dataset to analyse first year survival using a linear mixed model
+
+```{r}
+## Identify individuals that did reach the second year of life
+## -----------------------------------------------------------------------------
+alive <- filter(resighting_data,
+                DaysSinceHatching > 365) %>% 
+  .[["Ring"]] %>% unique()
+
+## Set-up data frame
+## -----------------------------------------------------------------------------
+df <- data.frame(Ring = c(dead[["Ring"]], alive), 
+                 Group = c(rep("Dead", nrow(dead)),
+                           rep("Alive", length(alive)))) %>% 
+  left_join(., ringing_data, by = "Ring") %>% 
+  mutate(survival = ifelse(Group == "Dead", 0, 1)) %>% 
+  mutate(Leucocytozoon = ifelse(Lprev == 0, "Uninfected", "Infected")) %>% 
+  mutate(Hatch = scale(Hatch)) %>% 
+  mutate(Age = scale(Age_days)) %>% 
+  mutate(BCI = scale(BCI)) %>% 
+  left_join(., data.frame(Year = as.numeric(as.character(nao$time)),
+                          NAO = nao$DJFM), by = "Year")
+```
+
+Analysis of survival probabilities using GLMMs:
+
+```{r}
+## Full model including all individuals 
+## -----------------------------------------------------------------------------
+model.1 <- glmer(survival ~ Leucocytozoon * Age + BCI + Rank + Hatch + NAO +
+                   (1|Year) + (1|Brood_ID),
+                 data = df, family = "binomial", control = glmerControl("bobyqa"))
+
+## Reduced model by excluding certain mortality causes
+## -----------------------------------------------------------------------------
+df2 <- filter(df, survival == 0,
+              !CauseDeath %in% c("Car collision", "Poisoned", "Predation",
+                                 "Shot", "Train collision", "Dead as chick")) 
+df2 <- rbind(df2, filter(df, survival == 1))
+model.2 <- glmer(survival ~ Leucocytozoon * Age + BCI + Rank + Hatch + NAO +
+                   (1|Year) + (1|Brood_ID),
+                 data = df2, control = glmerControl("bobyqa"),
+                 family = "binomial")
+
+## Plot model summaries
+## -----------------------------------------------------------------------------
+tab_model(model.1, model.2,
+          show.stat = T, string.stat = "t", show.reflvl = T,
+          title = "Binomial models predicting first year survival")
+
+## Write to html file --> Table 3 in the paper
+## -----------------------------------------------------------------------------
+tab_model(model.1, model.2, show.stat = T, string.stat = "t", show.reflvl = T,
+          file = "plots/BinomialModel.html", title = "Binomial models predicting first year survival")
+```
+
+Plots model predictions:
+
+```{r}
+## Predictions for body condition
+## -----------------------------------------------------------------------------
+pred.cond <- plot_model(model.1, type = "pred", terms = "BCI [all]", title = "",
+                        ci.lvl = 0.95, show.data = T, line.size = 1.22) +
+  theme_article() +
+  xlab("Std. body condition") +
+  ylab("Survival probability") +
+  labs(tag = "A")
+
+pred.nao <- plot_model(model.1, type = "pred", terms = "NAO [all]", title = "",
+                       ci.lvl = 0.95, show.data = T, line.size = 1.22) +
+  theme_article() +
+  xlab("NAO index") +
+  theme(axis.ticks.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(tag = "C")
+
+## Predictions for interaction Leucocytozoon with Age
+## -----------------------------------------------------------------------------
+pred.leuco <- 
+  plot_model(model.1, type = "pred", terms = c("Age [all]", "Leucocytozoon"),
+             title = "", ci.lvl = 0.95, show.data = T, 
+             line.size = 1.22) +
+  theme_article() +
+  theme(axis.ticks.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = c(1, 0.125),
+        legend.justification = c(1,0),
+        legend.title = element_text(face = "italic")) + 
+  xlab("Nestling age in days") +
+  ylab("Survival probability") +
+  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(tag = "B")
+
+## transform age back to original scale for easier interpretation
+## -----------------------------------------------------------------------------
+scale <- attr(df$Age,"scaled:scale"); center <- attr(df$Age,"scaled:center") 
+x.res <- data.frame(rescaled = seq(7, 49, 7)) %>% 
+  mutate(scaled = (rescaled - center) / scale)
+
+pred.leuco <- pred.leuco + scale_x_continuous(breaks = x.res$scaled,
+                                              labels = x.res$rescaled)
+
+## Create multiplot figure 4
+## -----------------------------------------------------------------------------
+Fig_4 <- pred.cond + pred.leuco + pred.nao
+Fig_4
+```
+
+```{r, echo=FALSE, eval=FALSE}
+ggsave(plot = Fig_4, filename = "plots/Fig_4.pdf", 
+       device = "pdf", dpi = 1200, width = 9, height = 6, units = "in")
+ggsave(plot = Fig_4, filename = "plots/Fig_4.png", 
+       device = "png", dpi = 1200, width = 9, height = 6, units = "in")
+```
+
+
+## Acknowledgements
+
+The implementation for calculating the adjusted $\hat C$ via bootstrapping was based on a modified R code created by Michael J. Conroy (accessed from https://sites.google.com/site/cmrsoftware/lecture-lab-schedule/6---model-fit-and-mmi/methods-for-assessing-fit)
+
+## Appendix
+
+##### Summary of resights
+
+```{r}
+resighting_data <- filter(resighting_data, Ring %in% ringing_data$Ring)
+round(table(resighting_data$study_area)/nrow(resighting_data),2)
+
+median(resighting_data$Dist2Nest, na.rm = T)
+sd(resighting_data$Dist2Nest, na.rm = T)
+
+median(resighting_data$Dist2Nest[resighting_data$study_area == FALSE], na.rm = T)
+sd(resighting_data$Dist2Nest[resighting_data$study_area == FALSE], na.rm = T)
+```
+
+
+##### Summarise capture histories by cohorts and years
+
+```{r, eval=FALSE}
+## Split capture history (ch) into individual ocassion
+## -----------------------------------------------------------------------------
+dat <- sapply(df.barker$ch, stringr::str_split, "", simplify = T) %>% 
+  do.call("rbind",.) %>% 
+  apply(.,2,as.numeric) %>% 
+  set_colnames(rep(c("L", "D"), nchar(df.barker$ch[[1]])/2)) 
+
+## separate L(ive) and D(ead) ocassions.
+## L: Here, only releases
+## -----------------------------------------------------------------------------
+L <- dat[,seq(1, ncol(dat), 2)] %>% 
+  set_colnames(2007:2020)
+sum(L)
+
+## D: '2' denotes live resigthings and '1' dead recovery
+## -----------------------------------------------------------------------------
+D <- dat[,seq(2, ncol(dat), 2)] %>% 
+  set_colnames(2007:2020)
+table(D)
+
+## Create am array to store summary of capture histories
+## D: 2 denotes live resigthing and 1 dead recovery
+## -----------------------------------------------------------------------------
+output <- matrix(
+  data = 0,
+  nrow = length(seq(2007, 2020)),
+  ncol = 2 + length(seq(2007, 2020)) + length(seq(2007, 2020))
+) %>% 
+  as.data.frame()
+colnames(output) <- 
+  c("Year", "Releases", 
+    paste0("L", 2007:2020),
+    paste0("D", 2007:2020))
+output[1:nrow(output),1] <- 2007:2020
+
+## Go through each capture history and extract releases, recovery and resights
+## D: 2 denotes live resigthing and 1 dead recovery
+## -----------------------------------------------------------------------------
+
+for (r in 1:nrow(L)) {
+  released <- names(which(L[r,] == 1)) 
+  resighted <- names(which(D[r,] == 2))
+  dead <- names(which(D[r,] == 1))
+  
+  ## add release to table
+  output[output$Year == released, "Releases"] <-
+    output[output$Year == released, "Releases"] + 1
+  
+  if (length(resighted[!is.na(resighted)] > 0)) {
+    output[output$Year == released, paste0("L", resighted)] <-
+      output[output$Year == released, paste0("L", resighted)] + 1
+  }
+  if (length(dead[!is.na(dead)] > 0)) {
+    output[output$Year == released, paste0("D", dead)] <-
+      output[output$Year == released, paste0("D", dead)] + 1
+  }
+}
+
+## Check that output is correct
+## D: 2 denotes live resigthing and 1 dead recovery
+## -----------------------------------------------------------------------------
+cat("Releases =", sum(output$Releases), "\n")
+cat("Recoveries =", sum(output[,17:30]), "\n")
+cat("Resights =", sum(output[,3:16]), "\n")
+
+write.csv(output, file = "data/sample.sizes.csv")
+```
+
+
+##### Create image of unique capture histories
+
+To summarise heterogeinity in resighitng historeis creates image for each cohort
+
+```{r}
+## Get encounter histories
+## -----------------------------------------------------------------------------
+dat <- sapply(df.barker$ch, stringr::str_split, "", simplify = T) %>% 
+  do.call("rbind",.) %>% 
+  apply(.,2,as.numeric) %>% 
+  set_colnames(rep(c("L", "D"), nchar(df.barker$ch[[1]])/2)) 
+
+for (i in 1:nrow(dat)) {
+## Release --> -1
+dat[i, which(dat[i,] == 1)[1]] <- -1
+## Resight --> -1
+dat[i, which(dat[i,] == 2)] <- -1
+## Dead --> 2
+dat[i, which(dat[i,] == 1)] <- 2
+## all alive to 1
+dat[i, which(dat[i,] == -1)] <- 1
+}
+
+png("plots/Fig_S5.png", width = 9, height = 6,
+    units = "in", res = 600)
+par(mfrow = c(3,5))
+for (i in c(2007, 2009:2020)) {
+  cohort <- which(df.barker$Year == i)
+  image(y = 1:nrow(dat[cohort,]),
+      x = seq(2007, 2020.5, 0.5),
+      z = t(dat[cohort,]),
+      col = c("White", "Black", "Red"),
+      xlab = "Ocassion", ylab = "Individuals",
+      main = i)
+}
+dev.off()
+```
+
+##### Visualise decay of encounters with age
+
+There is strong decline in the number of resightings per age class
+
+```{r}
+## split dead and live
+L <- dat[,seq(1, ncol(dat), 2)] %>% 
+  set_colnames(2007:2020)
+D <- dat[,seq(2, ncol(dat), 2)] %>% 
+  set_colnames(2007:2020)
+
+## time since birth
+mat <- matrix(0, nrow = nrow(dat), ncol = 15) %>% 
+  set_colnames(., seq(-1, 13, 1))
+marked <- apply(L, 1, function(x) which(x == 1)[1])
+  
+for (i in 1:nrow(dat)) {
+mat[i, 1] <- 1  
+live <- which(D[i,] != 0) - marked[i] + 2
+mat[i, live] <- 1
+}
+colSums(mat)
+
+mat <- data.frame(x = colnames(mat) %>% as.numeric(),
+                  y = colSums(mat))
+
+Fig_S6 <- ggplot(mat, aes(x = x + 1, y)) +
+  geom_bar(stat = "identity", col = "black", fill = "grey80",
+           na.rm = T) +
+  theme_article() +
+  ylab("Number of individuals (log-transformed)\n") +
+  xlab("\nInterval since birth") +
+  scale_x_continuous(breaks = seq(0, 14, 1), expand = c(0,0)) +
+  scale_y_log10(breaks = c(5, 10, 20, 50, 100, 250, 1000, 2500),
+                expand = c(0,0))
+Fig_S6
+```
+
+```{r, echo=FALSE, eval=FALSE}
+ggsave(plot = Fig_S6, filename = "plots/Fig_S6.pdf",
+       width = 6, height = 6, units = "in", device = "pdf",
+       dpi = 1200)
+ggsave(plot = Fig_S6, filename = "plots/Fig_S6.png",
+       width = 6, height = 6, units = "in", device = "png",
+       dpi = 1200)
+```
+
+##### Climate variables
+
+Summarise climate variables and association to large sclae variation in NAO
+
+```{r}
+nao$sign <- ifelse(nao$DJFM > 0, "+", "-")
+p.nao <- 
+    ggplot(filter(nao, year > 2007),
+           aes(x = year - 1, y = DJFM, col = sign)) +
+    geom_line(col = "black") +
+    geom_point(size = 1.75) +
+    theme_article() +
+    theme(
+      legend.position = "none",
+      axis.line = element_line(size = .7, color = "black"),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+    scale_color_brewer(palette = "Set1",direction = -1) +
+    geom_hline(yintercept = 0, lty = "dotted") +
+    xlab("Survival period") +
+    ylab("NAO")
+
+p.snow <- 
+    ggplot(filter(nao, year > 2007),
+           aes(x = year - 1, y = snow)) +
+    geom_line(col = "black") +
+    geom_point(size = 1.75) +
+    theme_article() +
+    theme(
+      legend.position = "none",
+      axis.line = element_line(size = .7, color = "black"),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+    scale_color_brewer(palette = "Set1",direction = -1) +
+    xlab("Survival period") +
+    ylab("Snow [d]")
+
+p.temp <- 
+    ggplot(filter(nao, year > 2007),
+           aes(x = year - 1, y = temp)) +
+    geom_line(col = "black") +
+    geom_point(size = 1.75) +
+    theme_article() +
+    theme(
+      legend.position = "none",
+      axis.line = element_line(size = .7, color = "black"),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+    scale_color_brewer(palette = "Set1",direction = -1) +
+    xlab("Survival period") +
+    ylab("avg. temp [°C]")
+
+p.precip <-
+    ggplot(filter(nao, year > 2007),
+           aes(x = year - 1, y = precip)) +
+    geom_line(col = "black") +
+    geom_point(size = 1.75) +
+    theme_article() +
+    theme(
+      legend.position = "none",
+      axis.line = element_line(size = .7, color = "black"),
+      panel.background = element_rect(fill = NA),
+      panel.border = element_rect(fill = NA)) +
+    scale_x_continuous(breaks = seq(2007, 2020, 3), expand = c(0.02,0.02)) +
+    scale_color_brewer(palette = "Set1",direction = -1) +
+    xlab("Survival period") +
+    ylab("Cum. precip [mm]")
+
+
+Fig_S4 <- p.nao + 
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  p.snow + 
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  p.temp +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  p.precip  +
+  plot_annotation(tag_levels = "A") +
+  plot_layout(ncol = 1)
+Fig_S4
+```
+
+
+```{r, echo=FALSE, eval=TRUE}
+ggsave(plot = Fig_S4, filename = "plots/Fig_S4.pdf",
+       width = 6, height = 6, units = "in", device = "pdf",
+       dpi = 1200)
+ggsave(plot = Fig_S4, filename = "plots/Fig_S4.png",
+       width = 6, height = 6, units = "in", device = "png",
+       dpi = 1200)
+```
+
+
+##### Relationship body condition and brood rank
+
+Show association between brood rank and body condition
+
+```{r}
+## LMER testing for differences in average condition based 
+## brood rank 
+## -----------------------------------------------------------------------------
+ringing_data$Rank[ringing_data$Rank %in% c("4", "5")] <- "4/5"
+
+mod <- lmer(BCI ~ Rank + Brood_Size + (1|Brood_ID) + (1|Year), data =  ringing_data)
+
+## Check model performance and assumptions
+## -----------------------------------------------------------------------------
+# performance::check_model(mod)
+# performance::check_distribution(mod)
+# performance::model_performance(mod)
+
+## Predicted values for each treatment
+## -----------------------------------------------------------------------------
+(pred <- get_model_data(mod, type = 'pred', terms = "Rank") %>% 
+  mutate(Rank = factor(x = c("1","2","3", "4/5")))) 
+
+## Calculate tukey-contrasts based on the above model
+## -----------------------------------------------------------------------------
+(contrasts <- 
+emmeans::contrast(emmeans::emmeans(mod, "Rank"), 'tukey') %>%
+  broom::tidy()) 
+
+## create data frame to indicate signifcance of contrasts
+## -----------------------------------------------------------------------------
+(letters.df <- data.frame(
+  Rank = pred[["Rank"]],
+  BCI = pred[["conf.high"]],
+  label = c("a", "b", "c", "d")))
+
+## Plot Relationship between condition and rank
+## -----------------------------------------------------------------------------
+Fig_S7 <- ggplot(pred, aes(x = Rank, y = predicted, fill = Rank, col = Rank)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                colour = 'black', size = 1.5, width = .1) +
+  geom_errorbar(aes(ymin = predicted - std.error,
+                    ymax = predicted + std.error) ,
+                size = 8, width = 0) +
+  geom_point(col = "Black") +
+  theme_article() +
+  theme(legend.position = "none") +
+  stat_n_text(data = ringing_data, aes(x = Rank, y = BCI), 
+              y.pos = -68, vjust = 0, y.expand.factor = 0.5) +
+  xlab("Hierarchical brood rank") +
+  ylab("Standardised body condition") +
+  geom_hline(yintercept = 0, lty = "dotted") +
+  geom_text(data = letters.df, aes(x = Rank, y = BCI, label = label),
+            size = 4, color = "black", hjust = 0.5, vjust = -0.5, fontface = "bold") +
+  labs(title = "Model predictions", subtitle = "GLMM: BCI ~ Rank + Brood_Size + (1|Brood_ID) + (1|Year) ")
+Fig_S7
+```
+
+```{r, eval=TRUE, echo=FALSE}
+ggsave(plot = Fig_S7, filename = "plots/Fig_S7.pdf", 
+       device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
+ggsave(plot = Fig_S7, filename = "plots/Fig_S7.png", 
+       device = "png", dpi = 1200, width = 6, height = 6, units = "in")
+```
+
+```{r, eval=FALSE, echo=FALSE}
+sessionInfo()
+```

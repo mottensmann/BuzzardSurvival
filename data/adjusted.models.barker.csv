@@ -1,0 +1,545 @@
+model,DeltaQAICc,weight,npar,QDeviance
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(1)R(time)R'(1)F(1)F'(1),0.00,0.217,32,7680.03
+S(AgeClass3 + Time + Body condition)p(1)r(1)R(time)R'(1)F(1)F'(1),0.40,0.177,32,7680.43
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),2.02,0.079,33,7680.02
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(1)R(time)R'(1)F(1)F'(1),2.02,0.079,33,7680.03
+S(AgeClass3 + Time + Body condition)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),2.37,0.066,33,7680.37
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(1)R(time)R'(1)F(1)F'(1),2.43,0.064,33,7680.43
+S(AgeClass3 * Body condition + Time)p(1)r(1)R(time)R'(1)F(1)F'(1),3.07,0.047,34,7679.05
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),4.04,0.029,34,7680.02
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),4.06,0.028,33,7682.07
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),4.39,0.024,34,7680.37
+S(AgeClass3 * Body condition + Time)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),5.09,0.017,35,7679.05
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(1)R(time)R'(1)F(1)F'(1),5.10,0.017,35,7679.05
+S(AgeClass3 + Time)p(1)r(1)R(time)R'(1)F(1)F'(1),5.52,0.014,31,2174.49
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(1)R(time)R'(1)F(1)F'(1),5.83,0.012,35,7679.78
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(1)R(time)R'(1)F(1)F'(1),5.90,0.011,32,7685.93
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),6.06,0.010,34,7682.04
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),6.09,0.010,34,7682.07
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),7.12,0.006,36,7679.05
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(1)R(time)R'(1)F(1)F'(1),7.25,0.006,32,7687.28
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(1)R(time)R'(1)F(1)F'(1),7.41,0.005,32,7687.44
+S(AgeClass3 + Time + Morph)p(1)r(1)R(time)R'(1)F(1)F'(1),7.42,0.005,33,2172.34
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),7.43,0.005,32,2174.37
+S(AgeClass3 + Time + Sex)p(1)r(1)R(time)R'(1)F(1)F'(1),7.48,0.005,32,2174.42
+S(AgeClass3 + Time)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),7.52,0.005,32,2174.46
+S(AgeClass3 + NAO + Time)p(1)r(1)R(time)R'(1)F(1)F'(1),7.54,0.005,32,2174.49
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),7.85,0.004,36,7679.77
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),7.90,0.004,33,7685.91
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(1)R(time)R'(1)F(1)F'(1),7.93,0.004,33,7685.93
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),8.09,0.004,35,7682.04
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),9.04,0.002,33,2173.96
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),9.24,0.002,33,7687.25
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(1)R(time)R'(1)F(1)F'(1),9.27,0.002,33,7687.28
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),9.39,0.002,33,7687.40
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),9.42,0.002,33,2174.34
+S(AgeClass3 + Time + Morph)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),9.43,0.002,34,2172.32
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(1)R(time)R'(1)F(1)F'(1),9.44,0.002,33,7687.44
+S(AgeClass3 + NAO + Time + Morph)p(1)r(1)R(time)R'(1)F(1)F'(1),9.45,0.002,34,2172.34
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),9.45,0.002,33,2174.37
+S(AgeClass3 + Time + Sex)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),9.47,0.002,33,2174.39
+S(AgeClass3 + NAO + Time + Sex)p(1)r(1)R(time)R'(1)F(1)F'(1),9.50,0.002,33,2174.42
+S(AgeClass3 + NAO + Time)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),9.54,0.002,33,2174.46
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),9.93,0.002,34,7685.91
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),10.02,0.001,36,7681.94
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),11.05,0.001,34,2173.94
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),11.07,0.001,34,2173.96
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),11.27,0.001,34,7687.25
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),11.42,0.001,34,7687.40
+S(AgeClass3 * NAO + Time)p(1)r(1)R(time)R'(1)F(1)F'(1),11.44,0.001,34,2174.33
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),11.45,0.001,34,2174.34
+S(AgeClass3 + NAO + Time + Morph)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),11.46,0.001,35,2172.32
+S(AgeClass3 + NAO + Time + Sex)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),11.50,0.001,34,2174.39
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(1)R(time)R'(1)F(1)F'(1),11.86,0.001,35,7685.82
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),11.99,0.001,37,7681.89
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),13.08,0.000,35,2173.94
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(1)R(time)R'(1)F(1)F'(1),13.19,0.000,35,7687.15
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(1)R(time)R'(1)F(1)F'(1),13.33,0.000,35,7687.28
+S(AgeClass3 * NAO + Time + Morph)p(1)r(1)R(time)R'(1)F(1)F'(1),13.35,0.000,36,2172.19
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),13.36,0.000,35,2174.23
+S(AgeClass3 * NAO + Time + Sex)p(1)r(1)R(time)R'(1)F(1)F'(1),13.40,0.000,35,2174.27
+S(AgeClass3 * NAO + Time)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),13.43,0.000,35,2174.30
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),13.84,0.000,36,7685.77
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(time)R'(1)F(1)F'(1),14.95,0.000,36,2173.79
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),15.18,0.000,36,7687.10
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),15.30,0.000,36,7687.22
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),15.34,0.000,36,2174.19
+S(AgeClass3 * NAO + Time + Morph)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),15.35,0.000,37,2172.16
+S(AgeClass3 * NAO + Time + Sex)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),15.39,0.000,36,2174.23
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),16.33,0.000,33,7694.33
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(1)F(1)F'(1),16.96,0.000,37,2173.77
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(1)R(Time)R'(1)F(1)F'(1),17.11,0.000,20,7721.37
+S(AgeClass3 + NAO + Body condition)p(1)r(1)R(Time)R'(1)F(1)F'(1),17.43,0.000,20,7721.69
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(1)R(1)R'(time)F(1)F'(1),17.85,0.000,32,7697.88
+S(AgeClass3 + Time + Body condition)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),18.34,0.000,33,7696.34
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),18.35,0.000,34,7694.33
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(1)R(Time)R'(1)F(1)F'(1),18.72,0.000,20,7722.98
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),18.99,0.000,21,7721.24
+S(AgeClass3 + NAO + Body condition)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),19.18,0.000,21,7721.43
+S(AgeClass3 + Time + Body condition)p(1)r(1)R(1)R'(time)F(1)F'(1),19.43,0.000,32,7699.46
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(1)R(1)R'(time)F(1)F'(1),19.87,0.000,33,7697.88
+S(AgeClass3 * Body condition + Time)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),19.95,0.000,35,7693.90
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),20.36,0.000,34,7696.34
+S(AgeClass3 * Body condition + NAO)p(1)r(1)R(Time)R'(1)F(1)F'(1),20.45,0.000,22,7720.68
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),20.46,0.000,21,7722.71
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(1)R(Time)R'(1)F(1)F'(1),20.53,0.000,22,7720.76
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(1)R(1)R'(time)F(1)F'(1),21.46,0.000,33,7699.46
+S(AgeClass3 * Body condition + Time)p(1)r(1)R(1)R'(time)F(1)F'(1),21.56,0.000,34,7697.54
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),21.97,0.000,36,7693.90
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(1)R(Time)R'(1)F(1)F'(1),22.08,0.000,22,7722.31
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),22.12,0.000,21,7724.37
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),22.16,0.000,36,7694.08
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),22.25,0.000,23,7720.47
+S(AgeClass3 * Body condition + NAO)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),22.29,0.000,23,7720.51
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),22.48,0.000,34,7698.46
+S(AgeClass3 + NAO)p(1)r(1)R(Time)R'(1)F(1)F'(1),23.04,0.000,19,2216.23
+S(AgeClass3 + Time)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),23.19,0.000,32,2190.13
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),23.37,0.000,33,7701.37
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(1)R(1)R'(time)F(1)F'(1),23.58,0.000,35,7697.54
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),23.60,0.000,23,7721.82
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(1)R(1)R'(time)F(1)F'(1),23.61,0.000,35,7697.57
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),23.95,0.000,22,7724.18
+S(AgeClass3 + NAO + Morph)p(1)r(1)R(Time)R'(1)F(1)F'(1),24.03,0.000,21,2213.20
+S(AgeClass3 + Time)p(1)r(1)R(1)R'(time)F(1)F'(1),24.34,0.000,31,2193.31
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),24.51,0.000,35,7698.46
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),24.62,0.000,33,7702.63
+S(AgeClass3 + NAO)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),24.86,0.000,20,2216.04
+S(AgeClass3 + Time + Sex)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),24.91,0.000,33,2189.83
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(1)R(Time)R'(1)F(1)F'(1),24.94,0.000,20,7729.20
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(1)R(Time)R'(1)F(1)F'(1),24.97,0.000,20,7729.24
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),25.01,0.000,23,7723.22
+S(AgeClass3 + NAO + Sex)p(1)r(1)R(Time)R'(1)F(1)F'(1),25.02,0.000,20,2216.20
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),25.03,0.000,20,2216.21
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),25.10,0.000,33,7703.10
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),25.19,0.000,33,2190.11
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),25.20,0.000,33,7703.21
+S(AgeClass3 + NAO + Time)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),25.22,0.000,33,2190.14
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),25.40,0.000,34,7701.37
+S(AgeClass3 + Time + Morph)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),25.46,0.000,34,2188.35
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),25.56,0.000,21,2214.72
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(1)R(1)R'(time)F(1)F'(1),25.84,0.000,32,7705.87
+S(AgeClass3 + NAO + Morph)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),25.88,0.000,22,2213.02
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),25.96,0.000,34,2188.85
+S(AgeClass3 + Time + Sex)p(1)r(1)R(1)R'(time)F(1)F'(1),26.05,0.000,32,2193.00
+S(AgeClass3 * NAO)p(1)r(1)R(Time)R'(1)F(1)F'(1),26.13,0.000,21,2215.29
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(1)R(1)R'(time)F(1)F'(1),26.15,0.000,32,7706.18
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),26.31,0.000,32,2193.26
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(1)R(1)R'(time)F(1)F'(1),26.34,0.000,32,7706.37
+S(AgeClass3 + NAO + Time)p(1)r(1)R(1)R'(time)F(1)F'(1),26.36,0.000,32,2193.31
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),26.58,0.000,24,7722.78
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),26.65,0.000,34,7702.63
+S(AgeClass3 + Time + Morph)p(1)r(1)R(1)R'(time)F(1)F'(1),26.74,0.000,33,2191.66
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),26.76,0.000,21,7729.01
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),26.78,0.000,21,7729.03
+S(AgeClass3 + NAO + Sex)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),26.85,0.000,21,2216.01
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),26.86,0.000,21,2216.02
+S(AgeClass3 + NAO + Time + Sex)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),26.93,0.000,34,2189.83
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),27.13,0.000,34,7703.10
+S(AgeClass3 * NAO + Morph)p(1)r(1)R(Time)R'(1)F(1)F'(1),27.14,0.000,23,2212.27
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),27.22,0.000,34,7703.20
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),27.22,0.000,34,2190.12
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),27.29,0.000,33,2192.20
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),27.41,0.000,22,2214.56
+S(AgeClass3 + NAO + Time + Morph)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),27.49,0.000,35,2188.35
+S(AgeClass3 * NAO)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),27.72,0.000,22,2214.86
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(1)R(1)R'(time)F(1)F'(1),27.87,0.000,33,7705.87
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),27.98,0.000,35,2188.85
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(1)R(Time)R'(1)F(1)F'(1),28.03,0.000,22,7728.26
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(1)R(Time)R'(1)F(1)F'(1),28.06,0.000,22,7728.29
+S(AgeClass3 + NAO + Time + Sex)p(1)r(1)R(1)R'(time)F(1)F'(1),28.08,0.000,33,2193.00
+S(AgeClass3 * NAO + Sex)p(1)r(1)R(Time)R'(1)F(1)F'(1),28.11,0.000,22,2215.26
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),28.12,0.000,22,2215.26
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(1)R(1)R'(time)F(1)F'(1),28.17,0.000,33,7706.18
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),28.34,0.000,33,2193.26
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(1)R(1)R'(time)F(1)F'(1),28.37,0.000,33,7706.37
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),28.42,0.000,37,7698.32
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),28.69,0.000,23,2213.82
+S(AgeClass3 * NAO + Morph)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),28.75,0.000,24,2211.86
+S(AgeClass3 + NAO + Time + Morph)p(1)r(1)R(1)R'(time)F(1)F'(1),28.76,0.000,34,2191.66
+S(AgeClass3 * NAO + Time)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),29.13,0.000,35,2190.00
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),29.17,0.000,36,7701.09
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),29.31,0.000,34,2192.20
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),29.61,0.000,23,7727.82
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),29.62,0.000,23,7727.83
+S(AgeClass3 * NAO + Sex)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),29.69,0.000,23,2214.82
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),29.70,0.000,23,2214.83
+S(AgeClass3 * NAO + Time)p(1)r(1)R(1)R'(time)F(1)F'(1),30.18,0.000,34,2193.08
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),30.33,0.000,24,2213.44
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),30.57,0.000,36,7702.49
+S(AgeClass3 * NAO + Time + Sex)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),30.84,0.000,36,2189.68
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),31.03,0.000,36,7702.95
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),31.13,0.000,36,2189.97
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),31.14,0.000,36,7703.06
+S(AgeClass3 * NAO + Time + Morph)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),31.42,0.000,37,2188.23
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(1)R(1)R'(time)F(1)F'(1),31.65,0.000,35,7705.60
+S(AgeClass3 * NAO + Time + Sex)p(1)r(1)R(1)R'(time)F(1)F'(1),31.89,0.000,35,2192.76
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(time)F(1)F'(1),31.90,0.000,37,2188.71
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(1)R(1)R'(time)F(1)F'(1),32.01,0.000,35,7705.96
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),32.16,0.000,35,2193.03
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(1)R(1)R'(time)F(1)F'(1),32.19,0.000,35,7706.14
+S(AgeClass3 * NAO + Time + Morph)p(1)r(1)R(1)R'(time)F(1)F'(1),32.60,0.000,36,2191.45
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(time)F(1)F'(1),33.17,0.000,36,2192.01
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),37.41,0.000,20,7741.67
+S(AgeClass3 + Time + Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),37.71,0.000,20,7741.97
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),37.72,0.000,21,7739.97
+S(AgeClass3 + Time + Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),38.55,0.000,21,7740.80
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),39.43,0.000,21,7741.67
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),39.72,0.000,21,7741.97
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),39.74,0.000,22,7739.97
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),40.56,0.000,22,7740.80
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),40.80,0.000,21,7743.05
+S(AgeClass3 * Body condition + Time)p(1)r(1)R(1)R'(1)F(1)F'(1),40.81,0.000,22,7741.04
+S(AgeClass3 * Body condition + Time)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),41.08,0.000,23,7739.29
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),41.48,0.000,22,7741.72
+S(AgeClass3 + Time)p(1)r(1)R(1)R'(1)F(1)F'(1),41.82,0.000,19,2235.02
+S(AgeClass3 + Time)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),42.60,0.000,20,2233.78
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),42.82,0.000,22,7743.05
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(1)R(1)R'(1)F(1)F'(1),42.82,0.000,23,7741.04
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),43.10,0.000,24,7739.29
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),43.42,0.000,23,7741.64
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(1)R(1)R'(1)F(1)F'(1),43.45,0.000,20,7747.71
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),43.50,0.000,23,7741.72
+S(AgeClass3 + Time + Sex)p(1)r(1)R(1)R'(1)F(1)F'(1),43.53,0.000,20,2234.71
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),43.57,0.000,21,7745.82
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(1)R(1)R'(1)F(1)F'(1),43.60,0.000,20,7747.86
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),43.67,0.000,20,2234.85
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(1)R(1)R'(1)F(1)F'(1),43.71,0.000,20,7747.97
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),43.75,0.000,24,7739.95
+S(AgeClass3 + NAO + Time)p(1)r(1)R(1)R'(1)F(1)F'(1),43.84,0.000,20,2235.02
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),44.09,0.000,21,7746.34
+S(AgeClass3 + Time + Morph)p(1)r(1)R(1)R'(1)F(1)F'(1),44.18,0.000,21,2233.34
+S(AgeClass3 + Time + Sex)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),44.30,0.000,21,2233.47
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),44.47,0.000,21,2233.63
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),44.48,0.000,21,7746.72
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),44.48,0.000,21,7746.73
+S(AgeClass3 + NAO + Time)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),44.61,0.000,21,2233.78
+S(AgeClass3 + Time + Morph)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),44.80,0.000,22,2231.95
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(1)R(1)R'(1)F(1)F'(1),45.46,0.000,21,7747.71
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),45.50,0.000,21,2234.67
+S(AgeClass3 + NAO + Time + Sex)p(1)r(1)R(1)R'(1)F(1)F'(1),45.54,0.000,21,2234.71
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(1)R(1)R'(Time)F(1)F'(1),45.59,0.000,20,7749.85
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(1)R(1)R'(1)F(1)F'(1),45.62,0.000,21,7747.86
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),45.68,0.000,21,2234.85
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(1)R(1)R'(1)F(1)F'(1),45.72,0.000,21,7747.97
+S(AgeClass3 + NAO + Body condition)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),45.75,0.000,21,7747.99
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),46.11,0.000,22,7746.34
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),46.18,0.000,22,2233.32
+S(AgeClass3 + NAO + Time + Morph)p(1)r(1)R(1)R'(1)F(1)F'(1),46.20,0.000,22,2233.34
+S(AgeClass3 + NAO + Time + Sex)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),46.32,0.000,22,2233.47
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),46.48,0.000,22,2233.63
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),46.49,0.000,22,7746.72
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),46.50,0.000,22,7746.73
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),46.64,0.000,21,7748.89
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),46.66,0.000,24,7742.86
+S(AgeClass3 + NAO + Time + Morph)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),46.82,0.000,23,2231.95
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),47.25,0.000,23,7745.47
+S(AgeClass3 * Body condition + NAO)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),47.37,0.000,23,7745.58
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),47.47,0.000,25,7741.65
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),47.52,0.000,22,2234.67
+S(AgeClass3 + NAO + Body condition)p(1)r(1)R(1)R'(Time)F(1)F'(1),47.61,0.000,20,7751.87
+S(AgeClass3 * NAO + Time)p(1)r(1)R(1)R'(1)F(1)F'(1),47.77,0.000,22,2234.91
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),48.19,0.000,23,2233.32
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(1)R(1)R'(Time)F(1)F'(1),48.25,0.000,20,7752.51
+S(AgeClass3 * NAO + Time)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),48.62,0.000,23,2233.75
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(1)R(1)R'(Time)F(1)F'(1),49.07,0.000,22,7749.30
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(1)R(1)R'(1)F(1)F'(1),49.32,0.000,23,7747.53
+S(AgeClass3 * Body condition + NAO)p(1)r(1)R(1)R'(Time)F(1)F'(1),49.44,0.000,22,7749.67
+S(AgeClass3 * NAO + Time + Sex)p(1)r(1)R(1)R'(1)F(1)F'(1),49.47,0.000,23,2234.60
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(1)R(1)R'(1)F(1)F'(1),49.56,0.000,23,7747.78
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),49.61,0.000,23,2234.74
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(1)R(1)R'(1)F(1)F'(1),49.63,0.000,23,7747.84
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),49.64,0.000,22,7749.88
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),50.07,0.000,24,7746.27
+S(AgeClass3 * NAO + Time + Morph)p(1)r(1)R(1)R'(1)F(1)F'(1),50.13,0.000,24,2233.24
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),50.26,0.000,23,7748.47
+S(AgeClass3 * NAO + Time + Sex)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),50.32,0.000,24,2233.43
+S(AgeClass3 + NAO)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),50.38,0.000,20,2241.56
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),50.48,0.000,24,2233.59
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),50.49,0.000,24,7746.69
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),50.50,0.000,24,7746.70
+S(AgeClass3 * NAO + Time + Morph)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),50.82,0.000,25,2231.91
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),51.36,0.000,21,7753.61
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),51.47,0.000,24,2234.58
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(1)R(1)R'(Time)F(1)F'(1),51.69,0.000,22,7751.92
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),52.11,0.000,22,2239.25
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),52.20,0.000,25,2233.30
+S(AgeClass3 + NAO + Sex)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),52.21,0.000,21,2241.37
+S(AgeClass3 + NAO)p(1)r(1)R(1)R'(Time)F(1)F'(1),52.26,0.000,19,2245.45
+S(AgeClass3 + NAO + Morph)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),52.26,0.000,22,2239.41
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),52.28,0.000,21,7754.53
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),52.31,0.000,21,2241.48
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),52.40,0.000,21,7754.65
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),53.24,0.000,24,7749.43
+S(AgeClass3 + NAO + Sex)p(1)r(1)R(1)R'(Time)F(1)F'(1),54.07,0.000,20,2245.25
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),54.09,0.000,21,2243.25
+S(AgeClass3 * NAO)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),54.10,0.000,22,2241.25
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(1)R(1)R'(Time)F(1)F'(1),54.17,0.000,20,7758.43
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),54.19,0.000,20,2245.37
+S(AgeClass3 + NAO + Morph)p(1)r(1)R(1)R'(Time)F(1)F'(1),54.21,0.000,21,2243.37
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(1)R(1)R'(Time)F(1)F'(1),54.26,0.000,20,7758.52
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),54.74,0.000,23,7752.95
+S(AgeClass3 * NAO)p(1)r(1)R(1)R'(Time)F(1)F'(1),55.79,0.000,21,2244.95
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),55.86,0.000,24,2238.97
+S(AgeClass3 * NAO + Sex)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),55.91,0.000,23,2241.04
+S(AgeClass3 * NAO + Morph)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),56.00,0.000,24,2239.11
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),56.00,0.000,23,7754.22
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),56.02,0.000,23,2241.15
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),56.12,0.000,23,7754.33
+S(AgeClass3 * NAO + Sex)p(1)r(1)R(1)R'(Time)F(1)F'(1),57.58,0.000,22,2244.73
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),57.66,0.000,23,2242.79
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(1)R(1)R'(Time)F(1)F'(1),57.71,0.000,22,7757.94
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),57.71,0.000,22,2244.86
+S(AgeClass3 * NAO + Morph)p(1)r(1)R(1)R'(Time)F(1)F'(1),57.75,0.000,23,2242.88
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(1)R(1)R'(Time)F(1)F'(1),57.80,0.000,22,7758.03
+S(AgeClass3 + Body condition)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),77.21,0.000,20,7781.47
+S(AgeClass3 + Juvenile:Body condition)p(1)r(1)R(Time)R'(1)F(1)F'(1),77.35,0.000,19,7783.63
+S(AgeClass3 + Body condition)p(1)r(1)R(Time)R'(1)F(1)F'(1),77.57,0.000,19,7783.85
+S(AgeClass3 + Juvenile:Body condition)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),77.72,0.000,20,7781.98
+S(AgeClass3 * Body condition)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),80.34,0.000,22,7780.57
+S(AgeClass3 * Body condition)p(1)r(1)R(Time)R'(1)F(1)F'(1),80.41,0.000,21,7782.66
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),81.86,0.000,20,7786.13
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(1)R(Time)R'(1)F(1)F'(1),82.17,0.000,19,7788.45
+S(AgeClass3)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),85.63,0.000,19,2278.82
+S(AgeClass3)p(1)r(1)R(Time)R'(1)F(1)F'(1),85.95,0.000,18,2281.16
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),86.04,0.000,21,7788.29
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),86.06,0.000,20,2277.24
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),86.09,0.000,21,2275.25
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),86.38,0.000,20,7790.64
+S(AgeClass3 + Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),86.59,0.000,20,2277.76
+S(AgeClass3 + Morph)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),86.76,0.000,21,2275.92
+S(AgeClass3 + Leucocytozoon)p(1)r(1)R(Time)R'(1)F(1)F'(1),86.92,0.000,19,2280.11
+S(AgeClass3 + Morph)p(1)r(1)R(Time)R'(1)F(1)F'(1),87.02,0.000,20,2278.19
+S(AgeClass3 + Juvenile:Rank)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),87.32,0.000,20,7791.58
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),87.57,0.000,20,7791.83
+S(AgeClass3 + Sex)p(1)r(Ageclass2)R(Time)R'(1)F(1)F'(1),87.64,0.000,20,2278.82
+S(AgeClass3 + Juvenile:Rank)p(1)r(1)R(Time)R'(1)F(1)F'(1),87.76,0.000,19,7794.04
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(1)R(Time)R'(1)F(1)F'(1),87.93,0.000,19,7794.21
+S(AgeClass3 + Sex)p(1)r(1)R(Time)R'(1)F(1)F'(1),87.96,0.000,19,2281.16
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),98.46,0.000,9,7824.85
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),99.70,0.000,8,7828.10
+S(AgeClass3 + NAO + Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),99.85,0.000,9,7826.24
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),100.11,0.000,9,7826.49
+S(AgeClass3 + NAO + Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),100.91,0.000,8,7829.30
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(1)R(1)R'(1)F(1)F'(1),101.12,0.000,8,7829.51
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),101.26,0.000,11,7823.63
+S(AgeClass3 + Juvenile:Body condition)p(1)r(1)R(1)R'(Time)F(1)F'(1),101.89,0.000,19,7808.16
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),101.95,0.000,10,7826.33
+S(AgeClass3 * Body condition + NAO)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),102.11,0.000,11,7824.48
+S(AgeClass3 + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),102.38,0.000,20,7806.64
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),102.46,0.000,11,7824.83
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),102.68,0.000,10,7827.06
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(1)R(1)R'(1)F(1)F'(1),102.91,0.000,10,7827.29
+S(AgeClass3 * Body condition + NAO)p(1)r(1)R(1)R'(1)F(1)F'(1),103.38,0.000,10,7827.76
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),103.78,0.000,9,7830.16
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),104.53,0.000,12,7824.89
+S(AgeClass3 + Body condition)p(1)r(1)R(1)R'(Time)F(1)F'(1),104.54,0.000,19,7810.82
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),104.92,0.000,11,7827.29
+S(AgeClass3 + NAO)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),105.01,0.000,8,2320.31
+S(AgeClass3 + Body condition)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),105.30,0.000,20,7809.56
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),105.73,0.000,9,7832.11
+S(AgeClass3 * Body condition)p(1)r(1)R(1)R'(Time)F(1)F'(1),105.78,0.000,21,7808.02
+S(AgeClass3 + NAO)p(1)r(1)R(1)R'(1)F(1)F'(1),106.21,0.000,7,2323.52
+S(AgeClass3 * Body condition)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),106.28,0.000,22,7806.51
+S(AgeClass3 + NAO + Morph)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),106.74,0.000,10,2318.03
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(1)R(1)R'(1)F(1)F'(1),106.86,0.000,8,7835.25
+S(AgeClass3 + NAO + Sex)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),106.93,0.000,9,2320.23
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),107.01,0.000,9,2320.31
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),107.01,0.000,9,7833.40
+S(AgeClass3 * NAO)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),107.32,0.000,10,2318.61
+S(AgeClass3 * NAO)p(1)r(1)R(1)R'(1)F(1)F'(1),107.87,0.000,9,2321.17
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),107.91,0.000,10,2319.20
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),107.94,0.000,11,7830.31
+S(AgeClass3 + NAO + Morph)p(1)r(1)R(1)R'(1)F(1)F'(1),108.03,0.000,9,2321.33
+S(AgeClass3 + NAO + Sex)p(1)r(1)R(1)R'(1)F(1)F'(1),108.12,0.000,8,2323.43
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(1)R(1)R'(1)F(1)F'(1),108.20,0.000,8,7836.60
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),108.21,0.000,8,2323.51
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(1)R(1)R'(1)F(1)F'(1),108.43,0.000,10,7832.80
+S(AgeClass3 * NAO + Morph)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),109.05,0.000,12,2316.33
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),109.21,0.000,9,2322.51
+S(AgeClass3 * NAO + Sex)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),109.23,0.000,11,2318.52
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),109.33,0.000,11,2318.61
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),109.33,0.000,11,7831.70
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(1)R(1)R'(Time)F(1)F'(1),109.66,0.000,19,7815.94
+S(AgeClass3 * NAO + Morph)p(1)r(1)R(1)R'(1)F(1)F'(1),109.69,0.000,11,2318.97
+S(AgeClass3 * NAO + Sex)p(1)r(1)R(1)R'(1)F(1)F'(1),109.77,0.000,10,2321.07
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(1)R(1)R'(1)F(1)F'(1),109.87,0.000,10,7834.25
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),109.88,0.000,10,2321.17
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),110.22,0.000,12,2317.49
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),110.55,0.000,20,7814.82
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),110.88,0.000,11,2320.16
+S(AgeClass3)p(1)r(1)R(1)R'(Time)F(1)F'(1),112.21,0.000,18,2307.41
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),112.93,0.000,20,7817.19
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),113.00,0.000,20,2304.18
+S(AgeClass3)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),113.14,0.000,19,2306.33
+S(AgeClass3 + Leucocytozoon)p(1)r(1)R(1)R'(Time)F(1)F'(1),113.18,0.000,19,2306.38
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),113.69,0.000,21,2302.85
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),113.92,0.000,21,7816.16
+S(AgeClass3 + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),114.07,0.000,20,2305.25
+S(AgeClass3 + Juvenile:Rank)p(1)r(1)R(1)R'(Time)F(1)F'(1),114.11,0.000,19,7820.39
+S(AgeClass3 + Sex)p(1)r(1)R(1)R'(Time)F(1)F'(1),114.16,0.000,19,2307.35
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(1)R(1)R'(Time)F(1)F'(1),114.21,0.000,19,7820.49
+S(AgeClass3 + Morph)p(1)r(1)R(1)R'(Time)F(1)F'(1),114.55,0.000,20,2305.73
+S(AgeClass3 + Sex)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),115.09,0.000,20,2306.27
+S(AgeClass3 + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),115.11,0.000,20,7819.38
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),115.18,0.000,20,7819.44
+S(AgeClass3 + Morph)p(1)r(Ageclass2)R(1)R'(Time)F(1)F'(1),115.43,0.000,21,2304.59
+S(AgeClass3 + Juvenile:Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),174.63,0.000,7,7905.03
+S(AgeClass3 + Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),175.26,0.000,7,7905.65
+S(AgeClass3 + Juvenile:Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),175.33,0.000,8,7903.73
+S(AgeClass3 + Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),176.56,0.000,8,7904.95
+S(AgeClass3 * Body condition)p(1)r(1)R(1)R'(1)F(1)F'(1),177.97,0.000,9,7904.36
+S(AgeClass3 * Body condition)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),178.85,0.000,10,7903.23
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(1)R(1)R'(1)F(1)F'(1),179.73,0.000,7,7910.13
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),181.07,0.000,8,7909.46
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),184.16,0.000,8,7912.55
+S(AgeClass3)p(1)r(1)R(1)R'(1)F(1)F'(1),184.24,0.000,6,2403.56
+S(AgeClass3 + Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),185.49,0.000,7,2402.80
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),185.56,0.000,9,7911.94
+S(AgeClass3)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),185.58,0.000,7,2402.89
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(1)R(1)R'(1)F(1)F'(1),185.59,0.000,7,7915.99
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(1)R(1)R'(1)F(1)F'(1),185.62,0.000,8,2400.93
+S(AgeClass3 + Juvenile:Rank)p(1)r(1)R(1)R'(1)F(1)F'(1),186.16,0.000,7,7916.56
+S(AgeClass3 + Sex)p(1)r(1)R(1)R'(1)F(1)F'(1),186.24,0.000,7,2403.56
+S(AgeClass3 + Morph)p(1)r(1)R(1)R'(1)F(1)F'(1),186.25,0.000,8,2401.55
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),186.75,0.000,9,2400.05
+S(AgeClass3 + Leucocytozoon)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),186.82,0.000,8,2402.12
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),186.98,0.000,8,7915.38
+S(AgeClass3 + Morph)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),187.51,0.000,9,2400.81
+S(AgeClass3 + Juvenile:Rank)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),187.53,0.000,8,7915.92
+S(AgeClass3 + Sex)p(1)r(Ageclass2)R(1)R'(1)F(1)F'(1),187.58,0.000,8,2402.89
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(1)R(time)R'(time)F(1)F'(1),7043.82,0.000,44,14699.50
+S(AgeClass3 + Time + Body condition)p(1)r(1)R(time)R'(time)F(1)F'(1),7044.88,0.000,44,14700.56
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(1)R(time)R'(time)F(1)F'(1),7045.85,0.000,45,14699.51
+S(AgeClass3 + Time + Body condition)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7046.47,0.000,45,14700.12
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(1)R(time)R'(time)F(1)F'(1),7046.94,0.000,45,14700.59
+S(AgeClass3 * Body condition + Time)p(1)r(1)R(time)R'(time)F(1)F'(1),7047.16,0.000,46,14698.77
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(1)R(time)R'(time)F(1)F'(1),7049.19,0.000,47,14698.77
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7049.31,0.000,45,14702.96
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(1)R(time)R'(time)F(1)F'(1),7049.43,0.000,47,14699.01
+S(AgeClass3 + Time)p(1)r(1)R(time)R'(time)F(1)F'(1),7050.55,0.000,43,9195.19
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(1)R(time)R'(time)F(1)F'(1),7050.83,0.000,44,14706.51
+S(AgeClass3 + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7051.04,0.000,45,14704.69
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7051.34,0.000,46,14702.96
+S(AgeClass3 + Time + Morph)p(1)r(1)R(time)R'(time)F(1)F'(1),7052.23,0.000,45,9192.80
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(1)R(time)R'(time)F(1)F'(1),7052.30,0.000,44,14707.98
+S(AgeClass3 + Time + Sex)p(1)r(1)R(time)R'(time)F(1)F'(1),7052.51,0.000,44,9195.11
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7052.56,0.000,44,9195.16
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(1)R(time)R'(time)F(1)F'(1),7052.57,0.000,44,14708.25
+S(AgeClass3 + NAO + Time)p(1)r(1)R(time)R'(time)F(1)F'(1),7052.59,0.000,44,9195.19
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(1)R(time)R'(time)F(1)F'(1),7052.86,0.000,45,14706.51
+S(AgeClass3 + NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7053.10,0.000,46,14704.72
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7053.30,0.000,45,9193.87
+S(AgeClass3 + NAO + Time + Body condition)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7053.99,0.000,46,14705.61
+S(AgeClass3 * Body condition + Time)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7054.09,0.000,47,14703.67
+S(AgeClass3 + NAO + Time + Morph)p(1)r(1)R(time)R'(time)F(1)F'(1),7054.26,0.000,46,9192.80
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(1)R(time)R'(time)F(1)F'(1),7054.33,0.000,45,14707.98
+S(AgeClass3 + NAO + Time + Sex)p(1)r(1)R(time)R'(time)F(1)F'(1),7054.54,0.000,45,9195.11
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7054.60,0.000,45,9195.16
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(1)R(time)R'(time)F(1)F'(1),7054.62,0.000,45,14708.27
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7055.24,0.000,48,14702.79
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7055.34,0.000,46,9193.87
+S(AgeClass3 * Body condition + Time + NAO)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7056.13,0.000,48,14703.67
+S(AgeClass3 * NAO + Time)p(1)r(1)R(time)R'(time)F(1)F'(1),7056.37,0.000,46,9194.90
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(1)R(time)R'(time)F(1)F'(1),7056.81,0.000,47,14706.39
+S(AgeClass3 * NAO + Time + Morph)p(1)r(1)R(time)R'(time)F(1)F'(1),7057.98,0.000,48,9192.44
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(1)R(time)R'(time)F(1)F'(1),7058.09,0.000,47,14707.67
+S(AgeClass3 * NAO + Time + Sex)p(1)r(1)R(time)R'(time)F(1)F'(1),7058.33,0.000,47,9194.83
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7058.39,0.000,47,9194.89
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(1)R(time)R'(time)F(1)F'(1),7058.41,0.000,47,14707.99
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(1)R(time)R'(time)F(1)F'(1),7059.12,0.000,48,9193.58
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7059.14,0.000,47,14708.73
+S(AgeClass3 + NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7060.38,0.000,46,14711.99
+S(AgeClass3 + NAO + Time)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7060.44,0.000,45,9201.01
+S(AgeClass3 + NAO + Time + Morph)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7062.21,0.000,47,9198.71
+S(AgeClass3 + NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7062.34,0.000,46,14713.96
+S(AgeClass3 + NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7062.41,0.000,46,9200.95
+S(AgeClass3 + NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7062.44,0.000,46,14714.05
+S(AgeClass3 + NAO + Time + Sex)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7062.47,0.000,46,9201.01
+S(AgeClass3 + NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7063.13,0.000,47,9199.63
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(1)R(Time)R'(time)F(1)F'(1),7063.23,0.000,32,14743.26
+S(AgeClass3 + NAO + Body condition)p(1)r(1)R(Time)R'(time)F(1)F'(1),7064.49,0.000,32,14744.52
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(1)R(Time)R'(time)F(1)F'(1),7064.79,0.000,32,14744.82
+S(AgeClass3 * NAO + Time + Morph)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7065.34,0.000,49,9197.77
+S(AgeClass3 * NAO + Time + Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7065.77,0.000,48,9200.23
+S(AgeClass3 * NAO + Time + Sex)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7065.82,0.000,48,9200.28
+S(AgeClass3 * NAO + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7066.60,0.000,49,9199.02
+S(AgeClass3 * NAO + Time + Juvenile:Body condition)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7066.85,0.000,48,14714.40
+S(AgeClass3 * Body condition + NAO)p(1)r(1)R(Time)R'(time)F(1)F'(1),7066.88,0.000,34,14742.86
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(1)R(Time)R'(time)F(1)F'(1),7067.05,0.000,34,14743.03
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(1)R(Time)R'(time)F(1)F'(1),7068.44,0.000,34,14744.42
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7070.30,0.000,33,14748.30
+S(AgeClass3 + NAO)p(1)r(1)R(Time)R'(time)F(1)F'(1),7070.84,0.000,31,9239.80
+S(AgeClass3 + NAO + Morph)p(1)r(1)R(Time)R'(time)F(1)F'(1),7071.78,0.000,33,9236.70
+S(AgeClass3 + NAO + Sex)p(1)r(1)R(Time)R'(time)F(1)F'(1),7072.78,0.000,32,9239.73
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(1)R(Time)R'(time)F(1)F'(1),7072.79,0.000,32,14752.82
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7072.81,0.000,32,9239.75
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(1)R(Time)R'(time)F(1)F'(1),7072.84,0.000,32,14752.86
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7072.85,0.000,33,9237.77
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7073.44,0.000,49,14718.95
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7073.66,0.000,35,14747.61
+S(AgeClass3 * NAO)p(1)r(1)R(Time)R'(time)F(1)F'(1),7074.37,0.000,33,9239.29
+S(AgeClass3 * NAO + Time)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7074.82,0.000,47,9211.32
+S(AgeClass3 * NAO + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7074.99,0.000,48,14722.54
+S(AgeClass3 * NAO + Morph)p(1)r(1)R(Time)R'(time)F(1)F'(1),7075.31,0.000,35,9236.18
+S(AgeClass3 + Time + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7075.39,0.000,46,14727.00
+S(AgeClass3 * NAO + Sex)p(1)r(1)R(Time)R'(time)F(1)F'(1),7076.31,0.000,34,9239.21
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(1)R(Time)R'(time)F(1)F'(1),7076.32,0.000,34,14752.30
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7076.33,0.000,34,9239.23
+S(AgeClass3 * NAO + Time + Juvenile:Rank)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7076.34,0.000,48,14723.89
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(1)R(Time)R'(time)F(1)F'(1),7076.37,0.000,34,14752.35
+S(AgeClass3 + Time)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7076.43,0.000,44,9219.03
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7076.44,0.000,35,9237.30
+S(AgeClass3 * NAO + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7076.85,0.000,48,14724.39
+S(AgeClass3 + Time + Juvenile:Hatch date)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7076.91,0.000,45,14730.56
+S(AgeClass3 + Time + Juvenile:Rank)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7078.31,0.000,45,14731.96
+S(AgeClass3 + Time + Sex)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7078.40,0.000,45,9218.96
+S(AgeClass3 + Time + Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7078.41,0.000,45,9218.98
+S(AgeClass3 + Time + Juvenile:Nestling age)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7078.46,0.000,45,14732.11
+S(AgeClass3 + Time + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7079.02,0.000,46,9217.55
+S(AgeClass3 + Time + Morph)p(1)r(Ageclass2)R(time)R'(time)F(1)F'(1),7079.20,0.000,46,9217.74
+S(AgeClass3 + NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7084.50,0.000,33,14762.50
+S(AgeClass3 + NAO + Body condition)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7084.53,0.000,33,14762.53
+S(AgeClass3 + NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7084.66,0.000,33,14762.66
+S(AgeClass3 * NAO + Juvenile:Body condition)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7086.06,0.000,35,14760.01
+S(AgeClass3 * NAO + Juvenile:Hatch date)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7086.80,0.000,35,14760.75
+S(AgeClass3 * Body condition + NAO)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7087.39,0.000,35,14761.35
+S(AgeClass3 + NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7089.06,0.000,34,14765.03
+S(AgeClass3 + NAO + Morph)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7089.23,0.000,34,9252.12
+S(AgeClass3 + NAO)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7089.57,0.000,32,9256.51
+S(AgeClass3 + NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.01,0.000,34,9253.90
+S(AgeClass3 + NAO + Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.44,0.000,33,9256.36
+S(AgeClass3 + NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.47,0.000,33,14769.47
+S(AgeClass3 + NAO + Juvenile:Rank)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.50,0.000,33,14769.51
+S(AgeClass3 + NAO + Sex)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.58,0.000,33,9256.50
+S(AgeClass3 * NAO + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.62,0.000,36,14763.55
+S(AgeClass3 * NAO + Morph)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.72,0.000,36,9250.56
+S(AgeClass3 * NAO)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7091.94,0.000,34,9254.83
+S(AgeClass3 * NAO + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7093.38,0.000,36,9252.22
+S(AgeClass3 * NAO + Juvenile:Nestling age)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7093.80,0.000,35,14767.75
+S(AgeClass3 * NAO + Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7093.83,0.000,35,9254.70
+S(AgeClass3 * NAO + Juvenile:Rank)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7093.90,0.000,35,14767.85
+S(AgeClass3 * NAO + Sex)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7093.96,0.000,35,9254.83
+S(AgeClass3 + Juvenile:Body condition)p(1)r(1)R(Time)R'(time)F(1)F'(1),7114.99,0.000,31,14797.04
+S(AgeClass3 + Body condition)p(1)r(1)R(Time)R'(time)F(1)F'(1),7116.51,0.000,31,14798.56
+S(AgeClass3 * Body condition)p(1)r(1)R(Time)R'(time)F(1)F'(1),7118.55,0.000,33,14796.55
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(1)R(Time)R'(time)F(1)F'(1),7120.96,0.000,31,14803.01
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7125.35,0.000,32,9292.30
+S(AgeClass3)p(1)r(1)R(Time)R'(time)F(1)F'(1),7125.67,0.000,30,9296.66
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7126.12,0.000,32,14806.15
+S(AgeClass3 + Morph)p(1)r(1)R(Time)R'(time)F(1)F'(1),7126.49,0.000,32,9293.44
+S(AgeClass3 + Leucocytozoon)p(1)r(1)R(Time)R'(time)F(1)F'(1),7126.71,0.000,31,9295.68
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(1)R(Time)R'(time)F(1)F'(1),7127.41,0.000,31,14809.46
+S(AgeClass3 + Juvenile:Rank)p(1)r(1)R(Time)R'(time)F(1)F'(1),7127.51,0.000,31,14809.56
+S(AgeClass3 + Sex)p(1)r(1)R(Time)R'(time)F(1)F'(1),7127.68,0.000,31,9296.65
+S(AgeClass3 + Morph)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7128.40,0.000,33,9293.32
+S(AgeClass3 + Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7128.90,0.000,32,9295.84
+S(AgeClass3 + Juvenile:Body condition)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7143.80,0.000,32,14823.82
+S(AgeClass3 + Body condition)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7144.07,0.000,32,14824.09
+S(AgeClass3 + Juvenile:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7146.25,0.000,33,9311.16
+S(AgeClass3 * Body condition)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7146.84,0.000,34,14822.82
+S(AgeClass3 + Juvenile:Hatch date)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7147.59,0.000,32,14827.62
+S(AgeClass3)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7150.50,0.000,31,9319.46
+S(AgeClass3 + Juvenile:Nestling age:Leucocytozoon)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7150.85,0.000,33,14828.86
+S(AgeClass3 + Juvenile:Nestling age)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7151.83,0.000,32,14831.85
+S(AgeClass3 + Juvenile:Rank)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7152.39,0.000,32,14832.41
+S(AgeClass3 + Sex)p(1)r(Ageclass2)R(Time)R'(time)F(1)F'(1),7152.52,0.000,32,9319.46
