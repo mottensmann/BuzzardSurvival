@@ -31,3 +31,5 @@ models.barker.adj.RDS
 03_R_code_cache
 03_R_code_files
 plots/Old_files
+R/subset_buzzard_db.R
+data/data_with_ring_nr
