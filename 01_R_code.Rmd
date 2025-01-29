@@ -299,7 +299,7 @@ ddl.barker <- readRDS("data/ddl.barker.RDS")
 
 #### Estimating c-hat based on bootstrapping
 
-The following code allows to estimate $\hat{C}$ based on parametric bootstrapping. For this purpose, first a general model structure is fitted to obtain model estimates. These estimates are then used to simulate capture histories that are re-analysed using the same model. *Because of considerable computation time, the output is saved within the repository and loaded later on. Also, as indicated above it is required to have programm MARK installed on the computer when repeating the calculations*.
+The following code allows to estimate $\hat{C}$ based on parametric bootstrapping. For this purpose, first a general model structure is fitted to obtain model estimates. These estimates are then used to simulate capture histories that are re-analysed using the same model. *Because of considerable computation time, the output is saved within the repository and loaded later on. Also, as indicated above it is required to have program MARK installed on the computer when repeating the calculations*.
 
 ```{r, eval = F, message=FALSE, warning=FALSE}
 ## Run global model to estimate parameters based on the raw data
@@ -418,7 +418,7 @@ Fig_S1 <- ggplot(data.frame(x = (c.hat$median*sim.out$deviance.median)/sim.out$d
 Fig_S1
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=T, eval=F}
 ## Save file to disk
 ## -----------------------------------------------------------------------------
 ggsave(plot = Fig_S1, filename =  "plots/Fig_S1.pdf", 
@@ -436,7 +436,7 @@ do_analysis.barker = function(dp.barker, ddl.barker) {
   ## Models for Survival S
   ## ---------------------------------------------------------------------------
   
-  ## Null model: Only age-specifc survival rates
+  ## Null model: Only age-specific survival rates
   ## ---------------------------------------------------------------------------
   S.01 = list(formula = ~ age, fixed = list(cohort = 2008, value = 1))
   
@@ -513,7 +513,7 @@ do_analysis.barker = function(dp.barker, ddl.barker) {
   S.55 = list(formula = ~ age + NAO + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
   S.56 = list(formula = ~ age * NAO + time + y1:Rank, fixed = list(cohort = 2008, value = 1))
   
-  ## Adding Hatching date to account for seasonsal effects on juvenile survival 
+  ## Adding Hatching date to account for seasonal effects on juvenile survival 
   ## ---------------------------------------------------------------------------
   S.57 = list(formula = ~ age + y1:Hatch, fixed = list(cohort = 2008, value = 1))
   S.58 = list(formula = ~ age + time + y1:Hatch, fixed = list(cohort = 2008, value = 1))
@@ -574,7 +574,7 @@ load("data/c.hat.barker.RData")
 models.barker.adj <-  adjust.chat(model.list = models.barker, chat = c.hat$median) 
 
 ## For upload on GitHub (file size limit exceeded) split in two 
-## output datafiles:
+## output data files:
 ## -----------------------------------------------------------------------------
 models.barker.adj_1 <- RMark::remove.mark(models.barker.adj, model.numbers = 273:544)
 models.barker.adj_2 <- RMark::remove.mark(models.barker.adj, model.numbers = 1:272)
@@ -594,7 +594,7 @@ supported.models.barker <- remove.mark(
   model.numbers = Large.AICc)
 saveRDS(supported.models.barker, file = "data/supported.models.barker.RDS")
 
-## Cleanup debris (=unused temporary files)
+## Clean-up debris (=unused temporary files)
 ## -----------------------------------------------------------------------------
 cleanup(ask = FALSE)
 unlink(list.files(pattern = "mark", ignore.case = F))
@@ -622,7 +622,7 @@ supported.models.barker <- readRDS("data/supported.models.barker.RDS")
 ```{r, eval=FALSE, echo=FALSE}
 ## tabulise models
 models <- data.frame(model.number = 1:(length(models.barker.adj) - 1),
-                     model = sapply(models.barker.adj[1:528], function(x) x[["model.name"]]))
+                     model = sapply(models.barker.adj[1:544], function(x) x[["model.name"]]))
 
 View(supported.models.barker$model.table)
 ```
@@ -766,7 +766,7 @@ data.frame(Parameter = vars, weight = RPrime.weights)
 
 ##### Survival rates (S)
 
-Explore surival rates in relation to fixed effects.
+Explore survival rates in relation to fixed effects.
 
 ##### Age
 
@@ -789,7 +789,7 @@ df.S.age <- lapply(rownames(S.mod.avg), function(row) {
     age %in% 2:13 ~ 'Adult'  
   )) %>% 
   mutate(ageclass = factor(ageclass, levels = c("Juvenile", "Subadult", "Adult"))) %>% 
-  ## round mean, se and CI values at fifth decimal to remove redundant values
+  ## round mean, Se and CI values at fifth decimal to remove redundant values
   subset(., select = c(year, estimate, se, lcl, ucl, ageclass)) %>% 
   mutate(estimate = round(estimate, 6)) %>% 
   mutate(se = round(se, 6)) %>% 
@@ -885,9 +885,10 @@ Fig_S2 <- ggplot(df, aes(x = NAO, y = estimate, group = ageclass)) +
   xlab("NAO") +
   ylab("Survival probability") +
   scale_y_continuous(breaks = seq(0, 1, .2), limits = c(0, 1)) 
+Fig_S2
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_S2, filename = "plots/Fig_S2.pdf",
        device = "pdf", dpi = 1200, width = 6, height = 4, units = "in")
 ggsave(plot = Fig_S2, filename = "plots/Fig_S2.png",
@@ -980,7 +981,7 @@ Fig_1 <- (p.age + theme(axis.text.x = element_blank(),
 Fig_1
 ```
 
-```{r, eval=FALSE, echo=FALSE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_1, filename = "plots/Fig_1.pdf", 
         device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
 ggsave(plot = Fig_1, filename = "plots/Fig_1.png", 
@@ -1072,26 +1073,40 @@ p.BCI <-
     xlab("Standardised Body condition index") +
     ylab("Survival probability")
 
-## Assemble multipanel figure, Figure 2 in the paper
+## Assemble multi-panel figure, Figure 2 in the paper
 ## -----------------------------------------------------------------------------
-col1 <- (p.BCI.time$`2007`/p.BCI.time$`2009`/p.BCI.time$`2010`/p.BCI.time$`2011`/p.BCI.time$`2012`)
-col2 <- (p.BCI.time$`2013`/p.BCI.time$`2014`/p.BCI.time$`2015`/p.BCI.time$`2016`/p.BCI.time$`2017`)
-col3 <- (p.BCI.time$`2018` + p.BCI.time$`2019` + p.BCI.time$`2020`) /
-  p.BCI + plot_layout(widths = c(rep(1,3), 3), heights = c(rep(0.5, 1), 3)) 
-Fig_2 <- (col1 | col2 | col3) + plot_layout(widths = c(.85,0.85,3))
-Fig_2
+# col1 <- (p.BCI.time$`2007`/p.BCI.time$`2009`/p.BCI.time$`2010`/p.BCI.time$`2011`/p.BCI.time$`2012`)
+# col2 <- (p.BCI.time$`2013`/p.BCI.time$`2014`/p.BCI.time$`2015`/p.BCI.time$`2016`/p.BCI.time$`2017`)
+# col3 <- (p.BCI.time$`2018` + p.BCI.time$`2019` + p.BCI.time$`2020`) /
+#   p.BCI + plot_layout(widths = c(rep(1,3), 3), heights = c(rep(0.5, 1), 3)) 
+# Fig_2 <- (col1 | col2 | col3) + plot_layout(widths = c(.85,0.85,3))
+# Fig_2
+
+Fig_2_new <- 
+  (p.BCI + 
+     scale_y_continuous(limits = c(0,1), expand = c(0,0)) +
+     labs(tag = "A")) +
+  (Fig_S2 + 
+     scale_y_continuous(limits = c(0,1), expand = c(0,0)) +
+     labs(tag = "B"))
+Fig_2_new
 ```
 
-```{r, eval=FALSE, echo=TRUE}
-ggsave(plot = Fig_2, filename =  "plots/Fig_2.pdf", 
+```{r, echo=T, eval=F}
+ggsave(plot = Fig_2_new, filename =  "plots/Fig_2NEW.pdf", 
         device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
-ggsave(plot = Fig_2, filename = "plots/Fig_2.png", 
+ggsave(plot = Fig_2_new, filename = "plots/Fig_2NEW.png", 
         device = "png", dpi = 1200, width = 6, height = 6, units = "in")
+
+#ggsave(plot = Fig_2, filename =  "plots/Fig_2.pdf", 
+#        device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
+#ggsave(plot = Fig_2, filename = "plots/Fig_2.png", 
+#        device = "png", dpi = 1200, width = 6, height = 6, units = "in")
 ```
 
 ##### Resighting rates (R)
 
-Explore re-sighitng rates:
+Explore re-sighting rates:
 
 ```{r, message=FALSE, warning=FALSE}
 ## obtain estimates 
@@ -1208,7 +1223,7 @@ Fig_3 <- p.res + p.recov + plot_annotation(tag_levels = "A")
 Fig_3
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_3, filename =  "plots/Fig_3.pdf",
        device = "pdf", dpi = 1200, width = 6, height = 4, units = "in")
 ggsave(plot = Fig_3, filename = "plots/Fig_3.png",
@@ -1233,7 +1248,7 @@ ringing_data <- as.data.frame(read_csv("data/ringing_data.csv")) %>%
     Rank >= 4 ~ "4/5"))) 
 
 ## Query re-sighting data to identify individuals that are known
-## to have survived at least until reaching subadulthood
+## to have survived at least until reaching sub-adulthood
 resighting_data <- as.data.frame(read_csv("data/resighting_data.csv")) %>% 
   filter(Ring %in% ringing_data$Ring)
 
@@ -1304,7 +1319,7 @@ Fig_S3 <- p.CauseDeath + inset_element(p.TimeDeath, 0.25, 0.25, 1, 1) +
 Fig_S3
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_S3, filename = "plots/Fig_S3.pdf", 
        device = "pdf", dpi = 1200, width = 9, height = 6, units = "in")
 ggsave(plot = Fig_S3, filename = "plots/Fig_S3.png", 
@@ -1419,13 +1434,13 @@ x.res <- data.frame(rescaled = seq(7, 49, 7)) %>%
 pred.leuco <- pred.leuco + scale_x_continuous(breaks = x.res$scaled,
                                               labels = x.res$rescaled)
 
-## Create multiplot figure 4
+## Create multi-plot figure 4
 ## -----------------------------------------------------------------------------
 Fig_4 <- pred.cond + pred.leuco + pred.nao
 Fig_4
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_4, filename = "plots/Fig_4.pdf", 
        device = "pdf", dpi = 1200, width = 9, height = 6, units = "in")
 ggsave(plot = Fig_4, filename = "plots/Fig_4.png", 
@@ -1456,28 +1471,28 @@ sd(resighting_data$Dist2Nest[resighting_data$study_area == FALSE], na.rm = T)
 ##### Summarise capture histories by cohorts and years
 
 ```{r, eval=FALSE}
-## Split capture history (ch) into individual ocassion
+## Split capture history (ch) into individual occasion
 ## -----------------------------------------------------------------------------
 dat <- sapply(df.barker$ch, stringr::str_split, "", simplify = T) %>% 
   do.call("rbind",.) %>% 
   apply(.,2,as.numeric) %>% 
   set_colnames(rep(c("L", "D"), nchar(df.barker$ch[[1]])/2)) 
 
-## separate L(ive) and D(ead) ocassions.
+## separate L(ive) and D(ead) occasions.
 ## L: Here, only releases
 ## -----------------------------------------------------------------------------
 L <- dat[,seq(1, ncol(dat), 2)] %>% 
   set_colnames(2007:2020)
 sum(L)
 
-## D: '2' denotes live resigthings and '1' dead recovery
+## D: '2' denotes live resightings and '1' dead recovery
 ## -----------------------------------------------------------------------------
 D <- dat[,seq(2, ncol(dat), 2)] %>% 
   set_colnames(2007:2020)
 table(D)
 
 ## Create am array to store summary of capture histories
-## D: 2 denotes live resigthing and 1 dead recovery
+## D: 2 denotes live resighting and 1 dead recovery
 ## -----------------------------------------------------------------------------
 output <- matrix(
   data = 0,
@@ -1492,7 +1507,7 @@ colnames(output) <-
 output[1:nrow(output),1] <- 2007:2020
 
 ## Go through each capture history and extract releases, recovery and resights
-## D: 2 denotes live resigthing and 1 dead recovery
+## D: 2 denotes live resighting  and 1 dead recovery
 ## -----------------------------------------------------------------------------
 
 for (r in 1:nrow(L)) {
@@ -1515,7 +1530,7 @@ for (r in 1:nrow(L)) {
 }
 
 ## Check that output is correct
-## D: 2 denotes live resigthing and 1 dead recovery
+## D: 2 denotes live resighting  and 1 dead recovery
 ## -----------------------------------------------------------------------------
 cat("Releases =", sum(output$Releases), "\n")
 cat("Recoveries =", sum(output[,17:30]), "\n")
@@ -1527,7 +1542,7 @@ write.csv(output, file = "data/sample.sizes.csv")
 
 ##### Create image of unique capture histories
 
-To summarise heterogeinity in resighitng historeis creates image for each cohort
+To summarise heterogeneity in resighting  histories creates image for each cohort
 
 ```{r}
 ## Get encounter histories
@@ -1548,24 +1563,24 @@ dat[i, which(dat[i,] == 1)] <- 2
 dat[i, which(dat[i,] == -1)] <- 1
 }
 
-png("plots/Fig_S5.png", width = 9, height = 6,
-    units = "in", res = 600)
-par(mfrow = c(3,5))
-for (i in c(2007, 2009:2020)) {
-  cohort <- which(df.barker$Year == i)
-  image(y = 1:nrow(dat[cohort,]),
-      x = seq(2007, 2020.5, 0.5),
-      z = t(dat[cohort,]),
-      col = c("White", "Black", "Red"),
-      xlab = "Ocassion", ylab = "Individuals",
-      main = i)
-}
-dev.off()
+# png("plots/Fig_S5.png", width = 9, height = 6,
+#     units = "in", res = 600)
+# par(mfrow = c(3,5))
+# for (i in c(2007, 2009:2020)) {
+#   cohort <- which(df.barker$Year == i)
+#   image(y = 1:nrow(dat[cohort,]),
+#       x = seq(2007, 2020.5, 0.5),
+#       z = t(dat[cohort,]),
+#       col = c("White", "Black", "Red"),
+#       xlab = "Ocassion", ylab = "Individuals",
+#       main = i)
+# }
+# dev.off()
 ```
 
 ##### Visualise decay of encounters with age
 
-There is strong decline in the number of resightings per age class
+There is strong decline in the number of re-sightings per age class
 
 ```{r}
 ## split dead and live
@@ -1601,7 +1616,7 @@ Fig_S6 <- ggplot(mat, aes(x = x + 1, y)) +
 Fig_S6
 ```
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_S6, filename = "plots/Fig_S6.pdf",
        width = 6, height = 6, units = "in", device = "pdf",
        dpi = 1200)
@@ -1612,7 +1627,7 @@ ggsave(plot = Fig_S6, filename = "plots/Fig_S6.png",
 
 ##### Climate variables
 
-Summarise climate variables and association to large sclae variation in NAO
+Summarise climate variables and association to large scale variation in NAO
 
 ```{r}
 nao$sign <- ifelse(nao$DJFM > 0, "+", "-")
@@ -1701,7 +1716,7 @@ Fig_S4
 ```
 
 
-```{r, echo=FALSE, eval=TRUE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_S4, filename = "plots/Fig_S4.pdf",
        width = 6, height = 6, units = "in", device = "pdf",
        dpi = 1200)
@@ -1716,23 +1731,48 @@ ggsave(plot = Fig_S4, filename = "plots/Fig_S4.png",
 Show association between brood rank and body condition
 
 ```{r}
-## LMER testing for differences in average condition based 
-## brood rank 
+## subset dataset to include all-wingtaged individuals as used above
+## -----------------------------------------------------------------------------
+ringing_data <- filter(
+  ringing_data,
+  # Subset to wing-tagged only
+  Tag ==  1, 
+  # Remove birds that died in the nest
+  !CauseDeath %in% "Dead as chick",
+  # Remove two birds predated as nestling
+  !Ring %in% c("3408543", "3417787"),
+  # known Sex
+  !is.na(Sex),
+  # No missing covariate 
+  !is.na(Lprev),
+  # Keep birds with assigned morph
+  Morph %in% 2:4) %>% 
+  #mutate(Rank = case_when(Rank == "1" ~ "A", Rank != "1" ~ "B")) %>% 
+  mutate(Lbinom = as.factor(ifelse(Lprev == 0, "Uninfected", "Infected"))) %>% 
+  ## scale continuous variables
+  mutate(Hatch = scale(Hatch)) %>% 
+  mutate(Age_days = scale(Age_days)) %>% 
+  mutate(BCI = scale(BCI))
+
+## Code Brood Rank as a factor with four levels
 ## -----------------------------------------------------------------------------
 ringing_data$Rank[ringing_data$Rank %in% c("4", "5")] <- "4/5"
 
+## LMER testing for differences in average condition based on brood rank 
+## -----------------------------------------------------------------------------
 mod <- lmer(BCI ~ Rank + Brood_Size + (1|Brood_ID) + (1|Year), data =  ringing_data)
+tab_model(mod, show.stat = T, show.se = T, show.ci = F, string.est = 'est', string.se = 'se', string.stat = 't')
 
 ## Check model performance and assumptions
 ## -----------------------------------------------------------------------------
-# performance::check_model(mod)
-# performance::check_distribution(mod)
-# performance::model_performance(mod)
+#performance::check_model(mod)
+#performance::check_distribution(mod)
+#performance::model_performance(mod)
 
 ## Predicted values for each treatment
 ## -----------------------------------------------------------------------------
-(pred <- get_model_data(mod, type = 'pred', terms = "Rank") %>% 
-  mutate(Rank = factor(x = c("1","2","3", "4/5")))) 
+(pred <- get_model_data(mod, type = 'pred', terms = "Rank"))
+pred$Rank <- c("1","2","3", "4/5")
 
 ## Calculate tukey-contrasts based on the above model
 ## -----------------------------------------------------------------------------
@@ -1740,7 +1780,7 @@ mod <- lmer(BCI ~ Rank + Brood_Size + (1|Brood_ID) + (1|Year), data =  ringing_d
 emmeans::contrast(emmeans::emmeans(mod, "Rank"), 'tukey') %>%
   broom::tidy()) 
 
-## create data frame to indicate signifcance of contrasts
+## create data frame to indicate significance of contrasts
 ## -----------------------------------------------------------------------------
 (letters.df <- data.frame(
   Rank = pred[["Rank"]],
@@ -1755,27 +1795,28 @@ Fig_S7 <- ggplot(pred, aes(x = Rank, y = predicted, fill = Rank, col = Rank)) +
   geom_errorbar(aes(ymin = predicted - std.error,
                     ymax = predicted + std.error) ,
                 size = 8, width = 0) +
+  scale_y_continuous(limits = c(-1.2, 0.4), breaks = seq(-1,0.4,0.2)) +
   geom_point(col = "Black") +
   theme_article() +
   theme(legend.position = "none") +
-  stat_n_text(data = ringing_data, aes(x = Rank, y = BCI), 
-              y.pos = -68, vjust = 0, y.expand.factor = 0.5) +
+  stat_n_text(data = ringing_data, aes(x = Rank, y = BCI),
+              y.pos = -1.2, vjust = 0, y.expand.factor = 0.5) +
   xlab("Hierarchical brood rank") +
   ylab("Standardised body condition") +
   geom_hline(yintercept = 0, lty = "dotted") +
   geom_text(data = letters.df, aes(x = Rank, y = BCI, label = label),
-            size = 4, color = "black", hjust = 0.5, vjust = -0.5, fontface = "bold") +
-  labs(title = "Model predictions", subtitle = "GLMM: BCI ~ Rank + Brood_Size + (1|Brood_ID) + (1|Year) ")
+            size = 4, color = "black", hjust = 0.5, vjust = -0.5, fontface = "bold") 
+  #labs(title = "Model predictions", subtitle = "GLMM: BCI ~ Rank + Brood_Size + (1|Brood_ID) + (1|Year) ")
 Fig_S7
 ```
 
-```{r, eval=TRUE, echo=FALSE}
+```{r, echo=T, eval=F}
 ggsave(plot = Fig_S7, filename = "plots/Fig_S7.pdf", 
        device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
 ggsave(plot = Fig_S7, filename = "plots/Fig_S7.png", 
        device = "png", dpi = 1200, width = 6, height = 6, units = "in")
 ```
 
-```{r, eval=FALSE, echo=FALSE}
+```{r}
 sessionInfo()
 ```
