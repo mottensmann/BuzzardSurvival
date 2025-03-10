@@ -1,5 +1,5 @@
 ---
-title: "R-code for 'Survival of common buzzards: Effects of condition, parasites, and climate on individual-specific rates'"
+title: "R-code for 'Surviving in a changing world: weather and juvenile condition matter for a long-lived avian predator, but blood parasites do not appear to'"
 author: "Meinolf Ottensmann, Anja Wiegmann, Tony Rinaud, Oliver Krüger, Christina Strube, Jamie Winternitz and Nayden Chakarov"
 output: html_document
 editor_options: 
@@ -10,7 +10,7 @@ editor_options:
 library(knitr)
 knitr::opts_chunk$set(
   fig.width = 8, fig.height = 8,highlight = TRUE, comment = "#>",
-  strip.white = TRUE,collapse = TRUE, fig.align = "center", cache = TRUE,
+  strip.white = TRUE,collapse = TRUE, fig.align = "center", cache = F,
   warning = F, message = F)
 ```
 
@@ -480,12 +480,12 @@ do_analysis.barker = function(dp.barker, ddl.barker) {
   S.28 = list(formula = ~ age * NAO + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
   S.29 = list(formula = ~ age + NAO + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
   S.30 = list(formula = ~ age * NAO + time + y1:Lbinom, fixed = list(cohort = 2008, value = 1))
-  S.31 = list(formula = ~ age + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
-  S.32 = list(formula = ~ age + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
-  S.33 = list(formula = ~ age + NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
-  S.34 = list(formula = ~ age * NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
-  S.35 = list(formula = ~ age + NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
-  S.36 = list(formula = ~ age * NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  #S.31 = list(formula = ~ age + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  #S.32 = list(formula = ~ age + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  #S.33 = list(formula = ~ age + NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  #S.34 = list(formula = ~ age * NAO + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  #S.35 = list(formula = ~ age + NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
+  #S.36 = list(formula = ~ age * NAO + time + y1:Age_days:Lbinom, fixed = list(cohort = 2008, value = 1))
   
   ## Adding Body condition, main effect and interaction terms
   ## ---------------------------------------------------------------------------
@@ -576,8 +576,8 @@ models.barker.adj <-  adjust.chat(model.list = models.barker, chat = c.hat$media
 ## For upload on GitHub (file size limit exceeded) split in two 
 ## output data files:
 ## -----------------------------------------------------------------------------
-models.barker.adj_1 <- RMark::remove.mark(models.barker.adj, model.numbers = 273:544)
-models.barker.adj_2 <- RMark::remove.mark(models.barker.adj, model.numbers = 1:272)
+models.barker.adj_1 <- RMark::remove.mark(models.barker.adj, model.numbers = 249:496)
+models.barker.adj_2 <- RMark::remove.mark(models.barker.adj, model.numbers = 1:248)
 saveRDS(models.barker.adj_1, file = "data/models.barker.adj_1.RDS", compress = 'bzip2')
 saveRDS(models.barker.adj_2, file = "data/models.barker.adj_2.RDS", compress = 'bzip2')
 
@@ -622,7 +622,7 @@ supported.models.barker <- readRDS("data/supported.models.barker.RDS")
 ```{r, eval=FALSE, echo=FALSE}
 ## tabulise models
 models <- data.frame(model.number = 1:(length(models.barker.adj) - 1),
-                     model = sapply(models.barker.adj[1:544], function(x) x[["model.name"]]))
+                     model = sapply(models.barker.adj[1:496], function(x) x[["model.name"]]))
 
 View(supported.models.barker$model.table)
 ```
@@ -632,8 +632,8 @@ View(supported.models.barker$model.table)
 
 A few models are not fully estimatable due to boundary estimates. These models represent the most complicated model structure including age, time, NAO and an additional covariate (BCI or *Leucocytozoon* prevalence). These models are not considered in computing model averages of parameter S.
 
-* `r supported.models.barker$model.184$model.name`
-* `r supported.models.barker$model.239$model.name`
+* `r supported.models.barker[[5]]$model.name`
+* `r supported.models.barker[[10]]$model.name`
 
 ```{r}
 ## Compute model averaged estimates
@@ -1041,7 +1041,7 @@ The model averaged estimates above show that the relationship between estimates 
 ## Compute real estimates from a time-invariant model
 ## -----------------------------------------------------------------------------
 BCI.reals <- covariate.predictions(
-  models.barker.adj$model.249, 
+  models.barker.adj$model.225, 
   data = data.frame(
     BCI = BCI.values), 
   indices = par.index$par.index,
@@ -1093,15 +1093,10 @@ Fig_2_new
 ```
 
 ```{r, echo=T, eval=F}
-ggsave(plot = Fig_2_new, filename =  "plots/Fig_2NEW.pdf", 
+ggsave(plot = Fig_2_new, filename =  "plots/Fig_2.pdf", 
         device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
-ggsave(plot = Fig_2_new, filename = "plots/Fig_2NEW.png", 
+ggsave(plot = Fig_2_new, filename = "plots/Fig_2.png", 
         device = "png", dpi = 1200, width = 6, height = 6, units = "in")
-
-#ggsave(plot = Fig_2, filename =  "plots/Fig_2.pdf", 
-#        device = "pdf", dpi = 1200, width = 6, height = 6, units = "in")
-#ggsave(plot = Fig_2, filename = "plots/Fig_2.png", 
-#        device = "png", dpi = 1200, width = 6, height = 6, units = "in")
 ```
 
 ##### Resighting rates (R)
@@ -1358,7 +1353,7 @@ Analysis of survival probabilities using GLMMs:
 ```{r}
 ## Full model including all individuals 
 ## -----------------------------------------------------------------------------
-model.1 <- glmer(survival ~ Leucocytozoon * Age + BCI + Rank + Hatch + NAO +
+model.1 <- glmer(survival ~ Leucocytozoon + Age + BCI + Rank + Hatch + NAO +
                    (1|Year) + (1|Brood_ID),
                  data = df, family = "binomial", control = glmerControl("bobyqa"))
 
@@ -1368,9 +1363,9 @@ df2 <- filter(df, survival == 0,
               !CauseDeath %in% c("Car collision", "Poisoned", "Predation",
                                  "Shot", "Train collision", "Dead as chick")) 
 df2 <- rbind(df2, filter(df, survival == 1))
-model.2 <- glmer(survival ~ Leucocytozoon * Age + BCI + Rank + Hatch + NAO +
+model.2 <- glmer(survival ~ Leucocytozoon + Age + BCI + Rank + Hatch + NAO +
                    (1|Year) + (1|Brood_ID),
-                 data = df2, control = glmerControl("bobyqa"),
+                 data = df2,
                  family = "binomial")
 
 ## Plot model summaries
@@ -1391,14 +1386,16 @@ Plots model predictions:
 ## Predictions for body condition
 ## -----------------------------------------------------------------------------
 pred.cond <- plot_model(model.1, type = "pred", terms = "BCI [all]", title = "",
-                        ci.lvl = 0.95, show.data = T, line.size = 1.22) +
+                        ci.lvl = 0.95, show.data = T, line.size = 1.22,
+                        colors = 'gs') +
   theme_article() +
   xlab("Std. body condition") +
   ylab("Survival probability") +
   labs(tag = "A")
 
 pred.nao <- plot_model(model.1, type = "pred", terms = "NAO [all]", title = "",
-                       ci.lvl = 0.95, show.data = T, line.size = 1.22) +
+                       ci.lvl = 0.95, show.data = T, line.size = 1.22,
+                       colors = 'gs') +
   theme_article() +
   xlab("NAO index") +
   theme(axis.ticks.y = element_blank(),
@@ -1409,9 +1406,9 @@ pred.nao <- plot_model(model.1, type = "pred", terms = "NAO [all]", title = "",
 ## Predictions for interaction Leucocytozoon with Age
 ## -----------------------------------------------------------------------------
 pred.leuco <- 
-  plot_model(model.1, type = "pred", terms = c("Age [all]", "Leucocytozoon"),
+  plot_model(model.1, type = "pred", terms = "Age [all]",
              title = "", ci.lvl = 0.95, show.data = T, 
-             line.size = 1.22) +
+             line.size = 1.22, colors = 'gs') +
   theme_article() +
   theme(axis.ticks.y = element_blank(),
         axis.title.y = element_blank(),

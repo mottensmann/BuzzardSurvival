@@ -16,8 +16,6 @@ knitr::opts_chunk$set(
 knitr::include_graphics(path = "plots/Fig_1.png", dpi = 600)
 ```
 
-*Due to a 100 MB size limit, the data file `models.barker.adj.RDS` can not be uploaded to GitHub in the moment*
-
 * **01_R_code.Rmd** contains the code to reproduce all analyses and figures presented in the manuscript. 
 * **02_R_code.Rmd** Supplementary analysis of the capture-mark-resighting data using the burnham models.
 * **03_R_code.Rmd** Supplementary analysis of the capture-mark-resighting data using the CJS models. 
