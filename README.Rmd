@@ -2,7 +2,7 @@
   output: github_document
 ---
   
-  ```{r, echo = FALSE}
+```{r, echo = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -10,7 +10,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-## *In preparation* R-code for survival analysis using combined dead and live encounter data of buzzards *Buteo buteo* 
+## R-code for 'Surviving in a changing world: weather and juvenile condition matter for a long-lived avian predator, but blood parasites do not appear to'
+### Meinolf Ottensmann, Anja Wiegmann, Tony Rinaud, Oliver Krüger, Christina Strube, Jamie Winternitz and Nayden Chakarov
 
 ```{r, fig.align='center', fig.height=6, fig.asp=1, echo=FALSE, eval=TRUE}
 knitr::include_graphics(path = "plots/Fig_1.png", dpi = 600)
