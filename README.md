@@ -1,7 +1,13 @@
 
-## R-code for ‘Surviving in a changing world: weather and juvenile condition matter for a long-lived avian predator, but blood parasites do not appear to’
+## R-code for ‘Surviving in a changing world: weather and juvenile condition matter for a long‐lived avian predator, but blood parasites do not appear to’
 
-### Meinolf Ottensmann, Anja Wiegmann, Tony Rinaud, Oliver Krüger, Christina Strube, Jamie Winternitz and Nayden Chakarov
+### Meinolf Ottensmann, Anja Wiegmann, Oliver Kruger, Tony Rinaud, Christina Strube, Jamie Winternitz & Nayden Chakarov
+
+[Ottensmann, M., Wiegmann, A., Kruger, O., Rinaud, T., Strube, C.,
+Winternitz, J., & Chakarov, N. (2025). Surviving in a changing world:
+weather and juvenile condition matter for a long‐lived avian predator,
+but blood parasites do not appear to. Oikos,
+e11072.](https://doi.org/10.1002/oik.11072)
 
 <img src="plots/Fig_1.png" width="1152" style="display: block; margin: auto;" />
 
